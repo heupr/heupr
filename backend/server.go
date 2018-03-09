@@ -8,7 +8,7 @@ type Server struct {
 
 // Start is exported so that cmd/ has access to launch the backend.
 func (s *Server) Start() {
-	// read settings from database
+	// read settings + installation/integration info from database
 	// loop over settings
 	// set settings into each repo settings field
 	// call newRepo for each repo
