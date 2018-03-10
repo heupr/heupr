@@ -1,4 +1,4 @@
-package normalize
+package preprocess
 
 // Container is the generalied internal object for processing.
 type Container struct {
@@ -8,7 +8,7 @@ type Container struct {
 	linked  map[string][]*Container
 }
 
-// Normalizer creates a uniform pre-processing step before training.
-type Normalizer interface {
-	Normalize(input []*Container) ([]*Container, error)
+// Executor creates a uniform preprocessing step before training.
+type Executor interface {
+	Execute(input []*Container) ([]*Container, error)
 }

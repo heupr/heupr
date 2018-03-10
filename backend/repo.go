@@ -5,15 +5,14 @@ import (
 
 	"github.com/google/go-github/github"
 
-	"heupr/backend/logic"
+	"heupr/backend/response"
 )
 
 type repo struct {
 	sync.Mutex
-	settings     *settings
-	client       *github.Client
-	models       map[string][]*logic.Model
-	conditionals map[string][]*logic.Conditional
+	settings  *settings
+	client    *github.Client
+	responses map[string][]*response.Action
 }
 
 func (s *Server) newRepo(settings settings) {
