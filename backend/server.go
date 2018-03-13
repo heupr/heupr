@@ -16,5 +16,15 @@ func (s *Server) Start() {
 }
 
 func (s *Server) timer() {
-	// NOTE: see the existing code; it will be nearly identical in all likelihood
+	// start ticker
+	// spin up workers/dispatchers
+	// start perpetual goroutine
+	// select case
+	// ticker.C
+	// - call s.database.read() to return container map
+	// - pass resulting container map into the collector
+	// - ^ possibly truncate the collector function into in-timer logic
+	// ender
+	// - close ender
+	// stop ticker
 }
