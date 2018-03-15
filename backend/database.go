@@ -6,8 +6,19 @@ import (
 	"heupr/backend/response/preprocess"
 )
 
+type issues struct {
+	// Assignment options
+	AsComment bool
+	Blacklist []string
+	Count     int
+	// Label options
+	Default []string
+	Types   []string
+}
+
 type settings struct {
-	// .heupr.toml file contents
+	Title  string
+	Issues map[string]map[string]issues
 	// integration information
 	// installation information
 }
