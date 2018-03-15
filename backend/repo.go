@@ -1,6 +1,7 @@
 package backend
 
 import (
+	// "errors"
 	"sync"
 
 	"github.com/google/go-github/github"
@@ -26,15 +27,39 @@ func (s *Server) newRepo(settings settings) {
 	// places new repo struct into the repos field on the server struct
 }
 
-func (r *repo) parseSettings() {
-	// reads settings field into memory
+func (r *repo) parseSettings(s *settings) error {
+	old := new(settings)
+	if r.settings != nil {
+		old = r.settings
+	}
+
+	if s.Issues != nil {
+		for action, responses := range s.Issues {
+			if oldResponses, ok := old.Issues[action]; ok {
+				for name, options := range responses {
+					if _, ok := oldResponses[name]; !ok {
+						_ = options
+						// boot up new responses w/ options
+					}
+				}
+			} else {
+				for name, options := range responses {
+					_ = name
+					_ = options
+					// boot up new responses w/ options
+				}
+			}
+		}
+	}
+
 	// create sync.WaitGroup w/ count of needed goroutines (possibly)
 	// provides an "interpretation" of the user requirements
-	// note: errors regarding file reads can be generated here
 	// this method is responsible for:
 	// 1) identifying models/conditionals to instantiate/train
 	// 2) instantiate necessary conflation/normalization logic based on logic requirements
 	// called by:
 	// - newRepo (when a new repo is being installed)
 	// - settings updates (when an event from the database includes changes to the .heupr.toml file)
+	r.settings = s
+	return nil
 }
