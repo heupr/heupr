@@ -2,7 +2,7 @@ package backend
 
 // Server hosts backend in-memory active repos and access to the database.
 type Server struct {
-	database accessDB
+	database dataAccess
 	repos    map[int64]*repo
 }
 

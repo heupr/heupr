@@ -14,12 +14,12 @@ type settings struct {
 }
 
 type integration struct {
-	installID int64
-	appID     int
-	repoID    int64
+	installationID int64
+	appID          int
+	repoID         int64
 }
 
-type accessDB interface {
+type dataAccess interface {
 	read() (map[int64][]*preprocess.Container, error)
 	readSettings() ([]settings, error)
 	readIntegrations() ([]integration, error)
