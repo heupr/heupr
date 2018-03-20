@@ -6,9 +6,19 @@ import (
 	"heupr/backend/response/preprocess"
 )
 
+type issues struct {
+	// Assignment response options
+	Blacklist []string
+	AsComment bool
+	Count     int
+	// Label response options
+	Default []string
+	Types   []string
+}
+
 type settings struct {
 	Title  string
-	Issues map[string]map[string]interface{}
+	Issues map[string]map[string]issues
 	// integration information
 	// installation information
 }
