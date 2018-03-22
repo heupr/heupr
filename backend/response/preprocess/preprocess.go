@@ -1,14 +1,14 @@
 package preprocess
 
+import (
+	"encoding/json"
+)
+
 // Container is the generalied internal object for processing.
 type Container struct {
+	repoID  int64
 	event   string
 	action  string
-	payload string
+	payload json.RawMessage
 	linked  map[string][]*Container
-}
-
-// Executor creates a uniform preprocessing step before training.
-type Executor interface {
-	Execute(input []*Container) ([]*Container, error)
 }

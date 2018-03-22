@@ -8,22 +8,25 @@ type Server struct {
 
 // Start is exported so that cmd/ has access to launch the backend.
 func (s *Server) Start() {
-	// read settings + installation/integration info from database
-	// call parseSettings and pass in settings
-	// call newRepo for each repo
-	// call timer
+	// open database and initialize the s.repos field
+	// read integrations, settings, and events into memory
+	// loop over map + instantiate repo structs into s.repos field
+	// reference settings + s.repos value using integrations map key
+	// establish response paths + initialize logic per repo
+	// reference events slice using integrations map key
+	// pass into necessary learn methods per response
+	// start timer() method
+	// note a sync.WaitGroup may be useful if these actions are piped into
+	// channels/goroutines
 }
 
-func (s *Server) timer() {
-	// start ticker
-	// spin up workers/dispatchers
-	// start perpetual goroutine
-	// select case
-	// ticker.C
-	// - call s.database.read() to return container map
-	// - pass resulting container map into the collector
-	// - ^ possibly truncate the collector function into in-timer logic
-	// ender
-	// - close ender
-	// stop ticker
+func (s *Server) timer(ender chan bool) {
+	// start ticker + dispatcher
+	// begin perpetual goroutine
+	// if ticker.C
+	// read new integrations, settings, and events into memory
+	// - place into work struct containing all three
+	// - pass work struct into collector
+	// if ender
+	// - stop ticker, close ender, and return
 }

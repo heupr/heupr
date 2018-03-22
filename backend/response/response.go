@@ -19,5 +19,4 @@ type Conditional interface {
 type Action struct {
 	Model       Model
 	Conditional Conditional
-	Preprocess  preprocess.Executor
 }

@@ -20,7 +20,6 @@ type settings struct {
 	Title  string
 	Issues map[string]map[string]issues
 	// integration information
-	// installation information
 }
 
 type integration struct {
@@ -46,20 +45,19 @@ type database struct {
 	sqlDB sqlDB
 }
 
-func (d *database) read() (map[int64][]*preprocess.Container, error) {
-	// used to pull out new objects; called by timer() method
+func (d *database) readIntegrations(query string) (map[int64]*integration, error) {
+	// reads in all integrations; called by Start()
+	// note that the returned map key will be redundant to integration.repoID
+	// note the argument may make this flexible to also be called by timer()
 	return nil, nil
 }
 
-func (d *database) readSettings() ([]*settings, error) {
-	// used on Re/Start to boot up necessary repo settings into memory
+func (d *database) readSettings(query string) (map[int64]*settings, error) {
+	// reads in all settings; called by Start
 	return nil, nil
 }
 
-func (d *database) readIntegrations() ([]integration, error) {
+func (d *database) readEvents(query string) (map[int64][]*preprocess.Container, error) {
+	// reads in all events; called by Start
 	return nil, nil
-}
-
-func (d *database) readIntegrationByRepoID(repoID int64) (integration, error) {
-	return integration{}, nil
 }

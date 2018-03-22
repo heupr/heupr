@@ -4,28 +4,39 @@ import (
 	"heupr/backend/response/preprocess"
 )
 
+type work struct {
+	repoID      int64
+	integration integration
+	setting     settings
+	events      []*preprocess.Container
+}
+
 type worker struct {
 	id    int
-	work  chan *preprocess.Container
-	queue chan chan *preprocess.Container
+	work  chan work
+	queue chan chan work
 	repos map[int64]*repo
 	quit  chan bool
 }
 
 func (w *worker) start() {
-	// start perpetual goroutine
-	// select case
-	// receive work from work chan
-	// - if push event
-	// - - if payload contains .heupr.toml file
-	// - - - send request to GitHub using GetContents method
-	// - - - pull out Content field from results and decode base64
-	// - - - pass string(results) into the BurntSushi/toml library to get TOML struct
-	// - - - populate into respective repo settings field
-	// - - - call parseSettings method
-	// - else if other event
-	// - - process to retrieve event-action combo
-	// - - use to populate into respective map value models/conditionals
-	// quit
-	// - return
+	go func() {
+		for {
+			w.queue <- w.work
+			select {
+			case newWork := <-w.work:
+				_ = newWork
+				// evaluate incoming work
+				// if integration present
+				// - initialize new repo w/ client and assets into s.repos
+				// if settings present + if repo key exists
+				// - set pathways + initialize responses
+				// if events present + if repo key exists
+				// - check to see if new integration is present in work struct
+				// - pass events into training/predicting as needed
+			case <-w.quit:
+				return
+			}
+		}
+	}()
 }
