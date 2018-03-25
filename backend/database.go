@@ -29,10 +29,9 @@ type integration struct {
 }
 
 type dataAccess interface {
-	read() (map[int64][]*preprocess.Container, error)
-	readSettings() ([]settings, error)
-	readIntegrations() ([]integration, error)
-	readIntegrationByRepoID(repoID int64) (integration, error)
+	readIntegrations(query string) (map[int64]*integration, error)
+	readSettings(query string) (map[int64]*settings, error)
+	readEvents(query string) (map[int64][]*preprocess.Container, error)
 }
 
 type sqlDB interface {
