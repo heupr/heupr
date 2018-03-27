@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/google/go-github/github"
+	"github.com/pkg/errors"
 
 	"heupr/backend/response"
 )
@@ -12,36 +13,51 @@ type repo struct {
 	sync.Mutex
 	settings  *settings
 	client    *github.Client
-	responses map[string][]*response.Action
+	responses map[string]map[string]*response.Action
 }
 
-func (s *Server) newRepo(settings settings) {}
-
 func (r *repo) parseSettings(s *settings) error {
-	old := new(settings)
-	if r.settings != nil {
-		old = r.settings
+	if s.Integration.repoID == nil {
+		return errors.New("repo id not found in settings integration")
 	}
 
-	if s.Issues != nil {
-		for action, responses := range s.Issues {
-			if oldResponses, ok := old.Issues[action]; ok {
-				for name, options := range responses {
-					if _, ok := oldResponses[name]; !ok {
-						_ = options
-						// boot up new responses w/ options
-					}
-				}
+	responses := make(map[string]map[string]*response.Action)
+
+	for action, opts := range s.Issues {
+		for name, opt := range opts {
+			if resp, ok := r.responses["issues-"+action][name]; ok {
+				resp.Options = opt
+				responses["issues-"+action][name] = resp
 			} else {
-				for name, options := range responses {
-					_ = name
-					_ = options
-					// boot up new responses w/ options
+				switch name {
+				case "assignment":
+					// initialize assignment w/ response.Options struct
+					// r.responses["issues-"+action][name] = Action + options
+				case "label":
+					// initialize label w/ response.Options struct
+				default:
+					return errors.Errorf("response %v not recognized", name)
 				}
 			}
 		}
 	}
 
 	r.settings = s
+	r.responses = responses
+
 	return nil
+}
+
+func (s *Server) newRepo(set *settings) (*repo, error) {
+	r := new(repo)
+
+	if err := r.parseSettings(set); err != nil {
+		return nil, errors.Errorf("parse settings error: %v", err)
+	}
+
+	// TODO:
+	// [ ] call training methods for necessary responses
+	// [ ] call through spun up goroutines use sync.WaitGroup to coordinate
+
+	return r, nil
 }

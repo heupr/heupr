@@ -3,29 +3,20 @@ package backend
 import (
 	"database/sql"
 
+	"heupr/backend/response"
 	"heupr/backend/response/preprocess"
 )
 
-type issues struct {
-	// Assignment response options
-	Blacklist []string
-	AsComment bool
-	Count     int
-	// Label response options
-	Default []string
-	Types   []string
+type integration struct {
+	installationID *int64
+	appID          *int
+	repoID         *int64
 }
 
 type settings struct {
-	Title  string
-	Issues map[string]map[string]issues
-	// integration information
-}
-
-type integration struct {
-	installationID int64
-	appID          int
-	repoID         int64
+	Title       string
+	Issues      map[string]map[string]response.Options
+	Integration integration
 }
 
 type dataAccess interface {

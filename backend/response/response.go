@@ -1,8 +1,17 @@
 package response
 
-import (
-	"heupr/backend/response/preprocess"
-)
+import "heupr/backend/response/preprocess"
+
+// Options provides user settings to selected Actions
+type Options struct {
+	// Assignment response options
+	Blacklist []string
+	AsComment bool
+	Count     int
+	// Label response options
+	Default []string
+	Types   []string
+}
 
 // Model is used for complicated response features.
 type Model interface {
@@ -15,8 +24,9 @@ type Conditional interface {
 	React(input *preprocess.Container) (interface{}, error)
 }
 
-// Action houses options for responses and the required normalization.
+// Action houses Options for responses and the required normalization.
 type Action struct {
+	Options     Options
 	Model       Model
 	Conditional Conditional
 }
