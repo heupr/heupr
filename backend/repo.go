@@ -16,9 +16,9 @@ type repo struct {
 	responses map[string]map[string]*response.Action
 }
 
-func (r *repo) parseSettings(s *settings) error {
-	if s.Integration.repoID == nil {
-		return errors.New("repo id not found in settings integration")
+func (r *repo) parseSettings(s *settings, id int64) error {
+	if id == 0 {
+		return errors.New("repo id not found")
 	}
 
 	responses := make(map[string]map[string]*response.Action)
@@ -48,10 +48,10 @@ func (r *repo) parseSettings(s *settings) error {
 	return nil
 }
 
-func (s *Server) newRepo(set *settings) (*repo, error) {
+func (s *Server) newRepo(set *settings, i *integration) (*repo, error) {
 	r := new(repo)
 
-	if err := r.parseSettings(set); err != nil {
+	if err := r.parseSettings(set, i.repoID); err != nil {
 		return nil, errors.Errorf("parse settings error: %v", err)
 	}
 

@@ -8,15 +8,14 @@ import (
 )
 
 type integration struct {
-	installationID *int64
-	appID          *int
-	repoID         *int64
+	installationID int64
+	appID          int
+	repoID         int64
 }
 
 type settings struct {
-	Title       string
-	Issues      map[string]map[string]response.Options
-	Integration integration
+	Title  string
+	Issues map[string]map[string]response.Options
 }
 
 type dataAccess interface {
