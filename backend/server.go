@@ -26,7 +26,8 @@ func (s *Server) timer(ender chan bool) {
 	// if ticker.C
 	// read new integrations, settings, and events into memory
 	// - place into work struct containing all three
-	// - pass work struct into collector
+	// - loop over resulting []*work
+	// - - pass each *work into worklaod chan *work
 	// if ender
 	// - stop ticker, close ender, and return
 }
