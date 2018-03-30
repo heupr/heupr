@@ -42,12 +42,6 @@ func Test_parseSettings(t *testing.T) {
 }
 
 func Test_newRepo(t *testing.T) {
-	s := &Server{
-		repos: map[int64]*repo{
-			int64(66): &repo{},
-		},
-	}
-
 	tests := []struct {
 		desc string
 		sets *settings
@@ -60,7 +54,7 @@ func Test_newRepo(t *testing.T) {
 	}
 
 	for i := range tests {
-		_, err := s.newRepo(tests[i].sets, tests[i].intg)
+		_, err := newRepo(tests[i].sets, tests[i].intg)
 		if (err == nil) != tests[i].pass {
 			t.Errorf("test #%v desc: %v, error: %v", i+1, tests[i].desc, err)
 		}

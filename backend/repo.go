@@ -48,7 +48,7 @@ func (r *repo) parseSettings(s *settings, id int64) error {
 	return nil
 }
 
-func (s *Server) newRepo(set *settings, i *integration) (*repo, error) {
+func newRepo(set *settings, i *integration) (*repo, error) {
 	r := new(repo)
 
 	if err := r.parseSettings(set, i.repoID); err != nil {
@@ -56,6 +56,7 @@ func (s *Server) newRepo(set *settings, i *integration) (*repo, error) {
 	}
 
 	// TODO:
+	// [ ] create GitHub client and place into repo field
 	// [ ] call training methods for necessary responses
 	// [ ] call through spun up goroutines use sync.WaitGroup to coordinate
 
