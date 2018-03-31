@@ -1,9 +1,16 @@
 package backend
 
+import "sync"
+
+type repos struct {
+	sync.RWMutex
+	internal map[int64]*repo
+}
+
 // Server hosts backend in-memory active repos and access to the database.
 type Server struct {
 	database dataAccess
-	repos    map[int64]*repo
+	repos    *repos
 }
 
 // Start is exported so that cmd/ has access to launch the backend.

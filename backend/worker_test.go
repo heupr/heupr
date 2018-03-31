@@ -9,8 +9,10 @@ func Test_start(t *testing.T) {
 	w := &worker{
 		work:    make(chan *work),
 		workers: make(chan chan *work),
-		repos:   make(map[int64]*repo),
-		quit:    make(chan bool),
+		repos: &repos{
+			internal: make(map[int64]*repo),
+		},
+		quit: make(chan bool),
 	}
 
 	defer close(w.work)
@@ -20,10 +22,10 @@ func Test_start(t *testing.T) {
 	tests := []struct {
 		desc string
 		wk   *work
-		expt map[int64]*repo
+		expt *repos
 		pass bool
 	}{
-		{"blank work and worker arguments", new(work), make(map[int64]*repo), false},
+		{"empty work and worker arguments", new(work), &repos{internal: make(map[int64]*repo)}, false},
 	}
 
 	for i := range tests {
@@ -35,7 +37,7 @@ func Test_start(t *testing.T) {
 		}()
 
 		if !reflect.DeepEqual(w.repos, tests[i].expt) {
-			t.Error("no match")
+			t.Error(tests[i].desc)
 		}
 	}
 }
