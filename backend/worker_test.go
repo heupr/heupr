@@ -15,10 +15,6 @@ func Test_start(t *testing.T) {
 		quit: make(chan bool),
 	}
 
-	defer close(w.work)
-	defer close(w.workers)
-	defer close(w.quit)
-
 	tests := []struct {
 		desc string
 		wk   *work
