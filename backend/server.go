@@ -1,6 +1,15 @@
 package backend
 
-import "sync"
+import (
+	"database/sql"
+	"sync"
+)
+
+var (
+	integrationQuery = ``
+	settingsQuery    = ``
+	eventsQuery      = ``
+)
 
 type repos struct {
 	sync.RWMutex
@@ -13,18 +22,41 @@ type Server struct {
 	repos    *repos
 }
 
+// openDatabase is designed to be overridden in unit testing.
+var openDatabase = func() (dataAccess, error) {
+	db, err := sql.Open("mysql", "root@/heupr?interpolateParams=true&parseTime=true")
+	if err != nil {
+		return nil, err
+	}
+	return &database{sqlDB: db}, nil
+}
+
 // Start is exported so that cmd/ has access to launch the backend.
 func (s *Server) Start() {
-	// open database and initialize the s.repos field
-	// read integrations, settings, and events into memory
-	// loop over map + instantiate repo structs into s.repos field
-	// reference settings + s.repos value using integrations map key
-	// establish response paths + initialize logic per repo
-	// reference events slice using integrations map key
-	// pass into necessary learn methods per response
-	// start timer() method
-	// note a sync.WaitGroup may be useful if these actions are piped into
-	// channels/goroutines
+	db, _ := openDatabase()
+	s.database = db
+
+	s.repos = new(repos)
+
+	intg, _ := s.database.readIntegrations(integrationQuery)
+	sets, _ := s.database.readSettings(settingsQuery)
+	evts, _ := s.database.readEvents(eventsQuery)
+
+	var wg sync.WaitGroup
+	wg.Add(len(intg))
+
+	for i := range intg {
+		go func() {
+			repo, _ := newRepo(sets[i], intg[i])
+			s.repos.internal[i] = repo
+			_ = evts
+			// TODO: Call necessary learn methods w/ evts[i] argument.
+			wg.Done()
+		}()
+	}
+
+	wiggin := make(chan bool)
+	s.timer(wiggin)
 }
 
 func (s *Server) timer(ender chan bool) {
