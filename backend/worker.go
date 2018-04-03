@@ -83,3 +83,11 @@ func dispatcher(r *repos, count int) error {
 
 	return nil
 }
+
+var collector = func(wk map[int64]*work) {
+	if len(wk) != 0 {
+		for _, w := range wk {
+			workQueue <- w
+		}
+	}
+}

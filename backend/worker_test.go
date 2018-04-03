@@ -37,3 +37,27 @@ func Test_start(t *testing.T) {
 		}
 	}
 }
+
+func Test_collector(t *testing.T) {
+	tests := []struct {
+		desc  string
+		work  map[int64]*work
+		count int
+	}{
+		{"empty work map", nil, 0},
+		{
+			"one work object",
+			map[int64]*work{
+				int64(94): &work{},
+			},
+			1,
+		},
+	}
+
+	for i := range tests {
+		collector(tests[i].work)
+		if contents := len(workQueue); contents != tests[i].count {
+			t.Error("test #%v desc: %v", i+1, tests[i].desc)
+		}
+	}
+}
