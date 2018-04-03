@@ -25,7 +25,6 @@ type dataAccess interface {
 }
 
 type sqlDB interface {
-	Open(driverName, dataSourceName string) (*sql.DB, error)
 	Close() error
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 }
