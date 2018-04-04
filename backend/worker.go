@@ -57,7 +57,7 @@ func (w *worker) start() {
 	}()
 }
 
-func dispatcher(r *repos, count int) error {
+var dispatcher = func(r *repos, count int) error {
 	workerQueue = make(chan chan *work, count)
 
 	for i := 0; i < count; i++ {

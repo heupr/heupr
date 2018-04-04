@@ -48,7 +48,9 @@ func Test_collector(t *testing.T) {
 		{
 			"one work object",
 			map[int64]*work{
-				int64(94): &work{},
+				int64(94): &work{
+					repoID: int64(94),
+				},
 			},
 			1,
 		},
@@ -56,8 +58,9 @@ func Test_collector(t *testing.T) {
 
 	for i := range tests {
 		collector(tests[i].work)
-		if len(workQueue) != tests[i].count {
-			t.Errorf("test #%v desc: %v, expected %v, received %v", i+1, tests[i].desc, tests[i].count, len(workQueue))
+		exp, rec := tests[i].count, len(workQueue)
+		if exp != rec {
+			t.Errorf("test #%v desc: %v, expected %v, received %v", i+1, tests[i].desc, exp, rec)
 		}
 	}
 }
