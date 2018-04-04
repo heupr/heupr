@@ -13,14 +13,14 @@ type integration struct {
 	repoID         int64
 }
 
-type settings struct {
+type setting struct {
 	Title  string
 	Issues map[string]map[string]response.Options
 }
 
 type dataAccess interface {
 	readIntegrations(query string) (map[int64]*integration, error)
-	readSettings(query string) (map[int64]*settings, error)
+	readSettings(query string) (map[int64]*setting, error)
 	readEvents(query string) (map[int64][]*preprocess.Container, error)
 }
 
@@ -40,7 +40,7 @@ func (d *database) readIntegrations(query string) (map[int64]*integration, error
 	return nil, nil
 }
 
-func (d *database) readSettings(query string) (map[int64]*settings, error) {
+func (d *database) readSettings(query string) (map[int64]*setting, error) {
 	// reads in all settings; called by Start
 	return nil, nil
 }

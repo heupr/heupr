@@ -11,7 +11,7 @@ var (
 
 type work struct {
 	repoID      int64
-	settings    *settings
+	setting     *setting
 	integration *integration
 	events      []*preprocess.Container
 }
@@ -30,20 +30,20 @@ func (w *worker) start() {
 			w.workers <- w.work
 			select {
 			case wk := <-w.work:
-				if wk.integration != nil && wk.settings != nil {
-					r, err := newRepo(wk.settings, wk.integration)
+				if wk.integration != nil && wk.setting != nil {
+					r, err := newRepo(wk.setting, wk.integration)
 					_ = err // TODO: Log this result.
 					// w.repos.RLock()
 					w.repos.Lock()
 					w.repos.internal[wk.repoID] = r
 					w.repos.Unlock()
-				} else if wk.integration == nil && wk.settings != nil {
+				} else if wk.integration == nil && wk.setting != nil {
 					w.repos.RLock()
 					r, ok := w.repos.internal[wk.repoID]
 					w.repos.RUnlock()
 					_ = ok // TODO: Log this result.
 					// TODO: This might need a lock as well?
-					err := r.parseSettings(wk.settings, wk.repoID)
+					err := r.parseSettings(wk.setting, wk.repoID)
 					_ = err // TODO: Log this result.
 				}
 

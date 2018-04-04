@@ -11,12 +11,12 @@ import (
 
 type repo struct {
 	sync.Mutex
-	settings  *settings
+	setting   *setting
 	client    *github.Client
 	responses map[string]map[string]*response.Action
 }
 
-func (r *repo) parseSettings(s *settings, id int64) error {
+func (r *repo) parseSettings(s *setting, id int64) error {
 	if id == 0 {
 		return errors.New("repo id not found")
 	}
@@ -42,13 +42,13 @@ func (r *repo) parseSettings(s *settings, id int64) error {
 		}
 	}
 
-	r.settings = s
+	r.setting = s
 	r.responses = responses
 
 	return nil
 }
 
-func newRepo(set *settings, i *integration) (*repo, error) {
+func newRepo(set *setting, i *integration) (*repo, error) {
 	r := new(repo)
 
 	if err := r.parseSettings(set, i.repoID); err != nil {

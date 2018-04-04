@@ -8,7 +8,7 @@ import (
 
 type startTestDB struct {
 	intg map[int64]*integration
-	sets map[int64]*settings
+	sets map[int64]*setting
 	evts map[int64][]*preprocess.Container
 }
 
@@ -16,7 +16,7 @@ func (s *startTestDB) readIntegrations(query string) (map[int64]*integration, er
 	return s.intg, nil
 }
 
-func (s *startTestDB) readSettings(query string) (map[int64]*settings, error) {
+func (s *startTestDB) readSettings(query string) (map[int64]*setting, error) {
 	return s.sets, nil
 }
 
@@ -30,7 +30,7 @@ func TestStart(t *testing.T) {
 	tests := []struct {
 		desc string
 		intg map[int64]*integration
-		sets map[int64]*settings
+		sets map[int64]*setting
 		evts map[int64][]*preprocess.Container
 		expt int
 	}{

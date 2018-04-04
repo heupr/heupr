@@ -14,15 +14,15 @@ func Test_parseSettings(t *testing.T) {
 	tests := []struct {
 		desc string
 		repo *repo
-		sets *settings
+		sets *setting
 		id   int64
 		pass bool
 	}{
-		{"empty repo method pointer", &repo{}, &settings{}, int64(0), false},
+		{"empty repo method pointer", &repo{}, &setting{}, int64(0), false},
 		{
 			"incorrect response name",
 			&repo{},
-			&settings{
+			&setting{
 				Issues: map[string]map[string]response.Options{
 					"opened": map[string]response.Options{
 						"fakename": response.Options{},
@@ -44,13 +44,13 @@ func Test_parseSettings(t *testing.T) {
 func Test_newRepo(t *testing.T) {
 	tests := []struct {
 		desc string
-		sets *settings
+		sets *setting
 		intg *integration
 		expt *repo
 		pass bool
 	}{
-		{"no repo id in settings", &settings{}, &integration{}, nil, false},
-		// {"no repo found on server", &settings{Integration: integration{repoID: ptrInt64(66)}}, nil, false},
+		{"no repo id in settings", &setting{}, &integration{}, nil, false},
+		// {"no repo found on server", &setting{Integration: integration{repoID: ptrInt64(66)}}, nil, false},
 	}
 
 	for i := range tests {

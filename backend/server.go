@@ -39,15 +39,15 @@ func (s *Server) Start() {
 
 	s.repos = new(repos)
 
-	intg, _ := s.database.readIntegrations(integrationQuery)
-	sets, _ := s.database.readSettings(settingsQuery)
+	integrations, _ := s.database.readIntegrations(integrationQuery)
+	settings, _ := s.database.readSettings(settingsQuery)
 
 	var wg sync.WaitGroup
-	wg.Add(len(intg))
+	wg.Add(len(integrations))
 
-	for i := range intg {
+	for i := range integrations {
 		go func() {
-			repo, _ := newRepo(sets[i], intg[i])
+			repo, _ := newRepo(settings[i], integrations[i])
 			s.repos.internal[i] = repo
 			wg.Done()
 		}()
@@ -74,21 +74,21 @@ func (s *Server) timer(ender chan bool) {
 		for {
 			select {
 			case <-ticker.C:
-				intg, _ := s.database.readIntegrations(newIntegrationsQuery)
-				sets, _ := s.database.readSettings(newSettingsQuery)
-				evts, _ := s.database.readEvents(newEventsQuery)
+				integrations, _ := s.database.readIntegrations(newIntegrationsQuery)
+				settings, _ := s.database.readSettings(newSettingsQuery)
+				events, _ := s.database.readEvents(newEventsQuery)
 
 				w := make(map[int64]*work)
 
-				for k, i := range intg {
+				for k, i := range integrations {
 					w[k].repoID = k
 					w[k].integration = i
 				}
-				for k, s := range sets {
+				for k, s := range settings {
 					w[k].repoID = k
-					w[k].settings = s
+					w[k].setting = s
 				}
-				for k, e := range evts {
+				for k, e := range events {
 					w[k].repoID = k
 					w[k].events = e
 				}
