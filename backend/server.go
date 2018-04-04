@@ -3,6 +3,7 @@ package backend
 import (
 	"database/sql"
 	"sync"
+	"time"
 )
 
 var (
@@ -40,7 +41,6 @@ func (s *Server) Start() {
 
 	intg, _ := s.database.readIntegrations(integrationQuery)
 	sets, _ := s.database.readSettings(settingsQuery)
-	evts, _ := s.database.readEvents(eventsQuery)
 
 	var wg sync.WaitGroup
 	wg.Add(len(intg))
@@ -49,8 +49,6 @@ func (s *Server) Start() {
 		go func() {
 			repo, _ := newRepo(sets[i], intg[i])
 			s.repos.internal[i] = repo
-			_ = evts
-			// TODO: Call necessary learn methods w/ evts[i] argument.
 			wg.Done()
 		}()
 	}
@@ -59,14 +57,49 @@ func (s *Server) Start() {
 	s.timer(wiggin)
 }
 
+var (
+	newIntegrationsQuery = ``
+	newSettingsQuery     = ``
+	newEventsQuery       = ``
+)
+
 func (s *Server) timer(ender chan bool) {
-	// start ticker + dispatcher
-	// begin perpetual goroutine
-	// if ticker.C
-	// read new integrations, settings, and events into memory
-	// - place into work struct containing all three
-	// - loop over resulting []*work
-	// - - pass each *work into worklaod chan *work
-	// if ender
-	// - stop ticker, close ender, and return
+	ticker := time.NewTicker(time.Second * 5)
+
+	if err := dispatcher(s.repos, 10); err != nil {
+		_ = err
+	}
+
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				intg, _ := s.database.readIntegrations(newIntegrationsQuery)
+				sets, _ := s.database.readSettings(newSettingsQuery)
+				evts, _ := s.database.readEvents(newEventsQuery)
+
+				w := make(map[int64]*work)
+
+				for k, i := range intg {
+					w[k].repoID = k
+					w[k].integration = i
+				}
+				for k, s := range sets {
+					w[k].repoID = k
+					w[k].settings = s
+				}
+				for k, e := range evts {
+					w[k].repoID = k
+					w[k].events = e
+				}
+
+				collector(w)
+
+			case <-ender:
+				ticker.Stop()
+				close(ender)
+				return
+			}
+		}
+	}()
 }
