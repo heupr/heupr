@@ -56,8 +56,8 @@ func Test_collector(t *testing.T) {
 
 	for i := range tests {
 		collector(tests[i].work)
-		if contents := len(workQueue); contents != tests[i].count {
-			t.Error("test #%v desc: %v", i+1, tests[i].desc)
+		if len(workQueue) != tests[i].count {
+			t.Errorf("test #%v desc: %v, expected %v, received %v", i+1, tests[i].desc, tests[i].count, len(workQueue))
 		}
 	}
 }
