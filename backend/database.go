@@ -36,7 +36,7 @@ type database struct {
 func (d *database) readIntegrations(query string) (map[int64]*integration, error) {
 	// reads in all integrations; called by Start()
 	// note that the returned map key will be redundant to integration.repoID
-	// note the argument may make this flexible to also be called by timer()
+	// note the argument may make this flexible to also be called by tick()
 	return nil, nil
 }
 

@@ -48,7 +48,7 @@ func (r *repo) parseSettings(s *setting, id int64) error {
 	return nil
 }
 
-func newRepo(set *setting, i *integration) (*repo, error) {
+var newRepo = func(set *setting, i *integration) (*repo, error) {
 	r := new(repo)
 
 	if err := r.parseSettings(set, i.repoID); err != nil {
