@@ -24,6 +24,10 @@ func (s *startTestDB) readEvents(query string) (map[int64][]*preprocess.Containe
 	return s.evts, nil
 }
 
+type testServer struct{}
+
+func (s *testServer) tick(wiggin chan bool, workQueue chan *work, workerQueue chan chan *work) {}
+
 func TestStart(t *testing.T) {
 	s := &Server{}
 
@@ -31,10 +35,25 @@ func TestStart(t *testing.T) {
 		desc string
 		intg map[int64]*integration
 		sets map[int64]*setting
-		evts map[int64][]*preprocess.Container
+		repo *repo
+		err  error
 		expt int
 	}{
-		{"all database tables empty", nil, nil, nil, 0},
+		{"all database tables empty", nil, nil, nil, nil, 0},
+		{
+			"single repo added",
+			map[int64]*integration{
+				int64(66): &integration{
+					repoID: int64(66),
+				},
+			},
+			map[int64]*setting{
+				int64(66): &setting{},
+			},
+			&repo{},
+			nil,
+			1,
+		},
 	}
 
 	for i := range tests {
@@ -42,17 +61,20 @@ func TestStart(t *testing.T) {
 			db := &startTestDB{
 				intg: tests[i].intg,
 				sets: tests[i].sets,
-				evts: tests[i].evts,
 			}
 			return db, nil
+		}
+		newRepo = func(set *setting, intg *integration) (*repo, error) {
+			return tests[i].repo, tests[i].err
 		}
 
 		s.Start()
 
-		if len(s.repos.internal) != tests[i].expt {
-			t.Errorf("test #%v desc: %v", i+1, tests[i].desc)
+		exp, rec := tests[i].expt, len(s.repos.internal)
+		if exp != rec {
+			t.Errorf("test #%v desc: %v, internal map expected length %v, received %v", i+1, tests[i].desc, exp, rec)
 		}
 	}
 }
 
-func Test_timer(t *testing.T) {}
+func Test_tick(t *testing.T) {}

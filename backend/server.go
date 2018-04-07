@@ -17,9 +17,12 @@ type repos struct {
 	internal map[int64]*repo
 }
 
-// Server hosts backend in-memory active repos and access to the database.
+// Server hosts backend in-memory active repos and access to the database as
+// well as channels for processing incoming work.
 type Server struct {
 	database dataAccess
+	work     chan *work
+	workers  chan chan *work
 	repos    *repos
 }
 
@@ -32,12 +35,19 @@ var openDatabase = func() (dataAccess, error) {
 	return &database{sqlDB: db}, nil
 }
 
+// ticker is an interface for unit test mocking.
+type ticker interface {
+	tick(wiggin chan bool, workQueue chan *work, workerQueue chan chan *work)
+}
+
 // Start is exported so that cmd/ has access to launch the backend.
 func (s *Server) Start() {
 	db, _ := openDatabase()
 	s.database = db
 
-	s.repos = new(repos)
+	s.repos = &repos{
+		internal: make(map[int64]*repo),
+	}
 
 	integrations, _ := s.database.readIntegrations(integrationQuery)
 	settings, _ := s.database.readSettings(settingsQuery)
@@ -47,14 +57,15 @@ func (s *Server) Start() {
 
 	for i := range integrations {
 		go func() {
+			// TODO: There should likely be a check for settings[i] existence.
 			repo, _ := newRepo(settings[i], integrations[i])
-			s.repos.internal[i] = repo
+			s.repos.internal[integrations[i].repoID] = repo
 			wg.Done()
 		}()
 	}
 
 	wiggin := make(chan bool)
-	s.timer(wiggin)
+	s.tick(wiggin, s.work, s.workers)
 }
 
 var (
@@ -63,12 +74,10 @@ var (
 	newEventsQuery       = ``
 )
 
-func (s *Server) timer(ender chan bool) {
+func (s *Server) tick(ender chan bool, workQueue chan *work, workersQueue chan chan *work) {
 	ticker := time.NewTicker(time.Second * 5)
 
-	if err := dispatcher(s.repos, 10); err != nil {
-		_ = err
-	}
+	dispatcher(s.repos, workQueue, workersQueue)
 
 	go func() {
 		for {
@@ -93,7 +102,7 @@ func (s *Server) timer(ender chan bool) {
 					w[k].events = e
 				}
 
-				collector(w)
+				collector(w, workQueue)
 
 			case <-ender:
 				ticker.Stop()
