@@ -4,11 +4,6 @@ import (
 	"heupr/backend/response/preprocess"
 )
 
-var (
-	workQueue   = make(chan *work, 100)
-	workerQueue chan chan *work
-)
-
 type work struct {
 	repoID      int64
 	setting     *setting
@@ -33,7 +28,6 @@ func (w *worker) start() {
 				if wk.integration != nil && wk.setting != nil {
 					r, err := newRepo(wk.setting, wk.integration)
 					_ = err // TODO: Log this result.
-					// w.repos.RLock()
 					w.repos.Lock()
 					w.repos.internal[wk.repoID] = r
 					w.repos.Unlock()
@@ -57,10 +51,8 @@ func (w *worker) start() {
 	}()
 }
 
-var dispatcher = func(r *repos, count int) error {
-	workerQueue = make(chan chan *work, count)
-
-	for i := 0; i < count; i++ {
+var dispatcher = func(r *repos, workQueue chan *work, workerQueue chan chan *work) {
+	for i := 0; i < cap(workerQueue); i++ {
 		w := &worker{
 			id:      i + 1,
 			work:    make(chan *work),
@@ -80,11 +72,9 @@ var dispatcher = func(r *repos, count int) error {
 			}()
 		}
 	}()
-
-	return nil
 }
 
-var collector = func(wk map[int64]*work) {
+var collector = func(wk map[int64]*work, workQueue chan *work) {
 	if len(wk) != 0 {
 		for _, w := range wk {
 			workQueue <- w
