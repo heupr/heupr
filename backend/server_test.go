@@ -24,10 +24,6 @@ func (s *startTestDB) readEvents(query string) (map[int64][]*preprocess.Containe
 	return s.evts, nil
 }
 
-type testServer struct{}
-
-func (s *testServer) tick(wiggin chan bool, workQueue chan *work, workerQueue chan chan *work) {}
-
 func TestStart(t *testing.T) {
 	s := &Server{}
 
@@ -76,5 +72,3 @@ func TestStart(t *testing.T) {
 		}
 	}
 }
-
-func Test_tick(t *testing.T) {}

@@ -35,15 +35,19 @@ var openDatabase = func() (dataAccess, error) {
 	return &database{sqlDB: db}, nil
 }
 
-// ticker is an interface for unit test mocking.
-type ticker interface {
-	tick(wiggin chan bool, workQueue chan *work, workerQueue chan chan *work)
+// openQueues is another function to override in unit testing.
+var openQueues = func() (chan *work, chan chan *work) {
+	return make(chan *work), make(chan chan *work)
 }
 
 // Start is exported so that cmd/ has access to launch the backend.
 func (s *Server) Start() {
 	db, _ := openDatabase()
 	s.database = db
+
+	workQueue, workersQueue := openQueues()
+	s.work = workQueue
+	s.workers = workersQueue
 
 	s.repos = &repos{
 		internal: make(map[int64]*repo),
@@ -52,16 +56,12 @@ func (s *Server) Start() {
 	integrations, _ := s.database.readIntegrations(integrationQuery)
 	settings, _ := s.database.readSettings(settingsQuery)
 
-	var wg sync.WaitGroup
-	wg.Add(len(integrations))
-
 	for i := range integrations {
-		go func() {
-			// TODO: There should likely be a check for settings[i] existence.
-			repo, _ := newRepo(settings[i], integrations[i])
-			s.repos.internal[integrations[i].repoID] = repo
-			wg.Done()
-		}()
+		// TODO: There should likely be a check for settings[i] existence.
+		repo, _ := newRepo(settings[i], integrations[i])
+		s.repos.Lock()
+		s.repos.internal[integrations[i].repoID] = repo
+		s.repos.Unlock()
 	}
 
 	wiggin := make(chan bool)
