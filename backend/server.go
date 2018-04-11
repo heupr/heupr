@@ -45,9 +45,9 @@ func (s *Server) Start() {
 	db, _ := openDatabase()
 	s.database = db
 
-	workQueue, workersQueue := openQueues()
+	workQueue, workerQueue := openQueues()
 	s.work = workQueue
-	s.workers = workersQueue
+	s.workers = workerQueue
 
 	s.repos = &repos{
 		internal: make(map[int64]*repo),
@@ -74,10 +74,10 @@ var (
 	newEventsQuery       = ``
 )
 
-func (s *Server) tick(ender chan bool, workQueue chan *work, workersQueue chan chan *work) {
+func (s *Server) tick(ender chan bool, workQueue chan *work, workerQueue chan chan *work) {
 	ticker := time.NewTicker(time.Second * 5)
 
-	dispatcher(s.repos, workQueue, workersQueue)
+	dispatcher(s.repos, workQueue, workerQueue)
 
 	go func() {
 		for {
