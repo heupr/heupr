@@ -90,16 +90,22 @@ func (s *Server) tick(ender chan bool, workQueue chan *work, workerQueue chan ch
 				w := make(map[int64]*work)
 
 				for k, i := range integrations {
-					w[k].repoID = k
-					w[k].integration = i
+					w[k] = &work{
+						repoID:      k,
+						integration: i,
+					}
 				}
 				for k, s := range settings {
-					w[k].repoID = k
-					w[k].setting = s
+					w[k] = &work{
+						repoID:  k,
+						setting: s,
+					}
 				}
 				for k, e := range events {
-					w[k].repoID = k
-					w[k].events = e
+					w[k] = &work{
+						repoID: k,
+						events: e,
+					}
 				}
 
 				collector(w, workQueue)
