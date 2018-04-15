@@ -2,7 +2,6 @@ package backend
 
 import (
 	"database/sql"
-	"fmt"
 	"time"
 
 	"heupr/backend/process"
@@ -32,11 +31,6 @@ var openDatabase = func() (dataAccess, error) {
 	return &database{sqlDB: db}, nil
 }
 
-// openQueues is another function to override in unit testing.
-var openQueues = func() (chan *process.Work, chan chan *process.Work) {
-	return make(chan *process.Work), make(chan chan *process.Work)
-}
-
 var (
 	newRepo    = process.NewRepo
 	dispatcher = process.Dispatcher
@@ -48,9 +42,8 @@ func (s *Server) Start() {
 	db, _ := openDatabase()
 	s.database = db
 
-	workQueue, workerQueue := openQueues()
-	s.work = workQueue
-	s.workers = workerQueue
+	s.work = make(chan *process.Work)
+	s.workers = make(chan chan *process.Work)
 
 	s.repos = &process.Repos{
 		Internal: make(map[int64]*process.Repo),
@@ -68,7 +61,7 @@ func (s *Server) Start() {
 	}
 
 	wiggin := make(chan bool)
-	s.tick(wiggin, s.work, s.workers)
+	s.tick(wiggin)
 }
 
 var (
@@ -77,43 +70,43 @@ var (
 	newEventsQuery       = ``
 )
 
-func (s *Server) tick(ender chan bool, workQueue chan *process.Work, workerQueue chan chan *process.Work) {
+func (s *Server) tick(ender chan bool) {
 	ticker := time.NewTicker(time.Second * 5)
 
-	dispatcher(s.repos, workQueue, workerQueue)
+	dispatcher(s.repos, s.work, s.workers)
 
 	go func() {
 		for {
+			integrations, _ := s.database.readIntegrations(newIntegrationsQuery)
+			settings, _ := s.database.readSettings(newSettingsQuery)
+			events, _ := s.database.readEvents(newEventsQuery)
+
+			w := make(map[int64]*process.Work)
+
+			for k, i := range integrations {
+				w[k] = &process.Work{
+					RepoID:      k,
+					Integration: i,
+				}
+			}
+			for k, s := range settings {
+				w[k] = &process.Work{
+					RepoID:  k,
+					Setting: s,
+				}
+			}
+			for k, e := range events {
+				w[k] = &process.Work{
+					RepoID: k,
+					Events: e,
+				}
+			}
+
+			collector(w, s.work)
+
 			select {
 			case <-ticker.C:
-				integrations, _ := s.database.readIntegrations(newIntegrationsQuery)
-				settings, _ := s.database.readSettings(newSettingsQuery)
-				events, _ := s.database.readEvents(newEventsQuery)
-
-				w := make(map[int64]*process.Work)
-                fmt.Println("debug", w) // TEMPORARY
-
-				for k, i := range integrations {
-					w[k] = &process.Work{
-						RepoID:      k,
-						Integration: i,
-					}
-				}
-				for k, s := range settings {
-					w[k] = &process.Work{
-						RepoID:  k,
-						Setting: s,
-					}
-				}
-				for k, e := range events {
-					w[k] = &process.Work{
-						RepoID: k,
-						Events: e,
-					}
-				}
-
-				collector(w, workQueue)
-
+				continue
 			case <-ender:
 				ticker.Stop()
 				close(ender)

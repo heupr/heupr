@@ -1,8 +1,9 @@
 package backend
 
 import (
+	"reflect"
 	"testing"
-    "time"
+	// "time"
 
 	"heupr/backend/process"
 	"heupr/backend/process/preprocess"
@@ -27,7 +28,7 @@ func (s *startTestDB) readEvents(query string) (map[int64][]*preprocess.Containe
 }
 
 func TestStart(t *testing.T) {
-    // TODO: For each test pass in true to the close map right away.
+	// TODO: For each test pass in true to the close map right away.
 	s := &Server{}
 
 	tests := []struct {
@@ -89,10 +90,11 @@ func Test_tick(t *testing.T) {
 		intg map[int64]*process.Integration
 		sets map[int64]*process.Setting
 		evts map[int64][]*preprocess.Container
+		expt map[int64]*process.Work
 	}{
-		{"test1", nil, nil, nil},
+		{"no values returned from database", nil, nil, nil, make(map[int64]*process.Work)},
 		{
-			"test2",
+			"single integration value in database",
 			map[int64]*process.Integration{
 				int64(50): &process.Integration{
 					RepoID: int64(50),
@@ -100,11 +102,16 @@ func Test_tick(t *testing.T) {
 			},
 			nil,
 			nil,
+			map[int64]*process.Work{
+				int64(50): &process.Work{
+					RepoID: int64(50),
+					Integration: &process.Integration{
+						RepoID: int64(50),
+					},
+				},
+			},
 		},
 	}
-
-	workQueue := make(chan *process.Work)
-	workerQueue := make(chan chan *process.Work)
 
 	for i := range tests {
 		ender := make(chan bool)
@@ -114,12 +121,17 @@ func Test_tick(t *testing.T) {
 				sets: tests[i].sets,
 				evts: tests[i].evts,
 			},
-			repos: &process.Repos{},
+			work:    make(chan *process.Work),
+			workers: make(chan chan *process.Work),
+			repos:   &process.Repos{},
 		}
 
-		s.tick(ender, workQueue, workerQueue)
-        time.Sleep(time.Second * 5) // TEMPORARY
+		s.tick(ender)
+		ender <- true
 
-		t.Error(result)
+		exp, rec := tests[i].expt, result
+		if !reflect.DeepEqual(tests[i].expt, result) {
+			t.Errorf("test #%v desc: %v, expected map %v, received %v", i+1, tests[i].desc, exp, rec)
+		}
 	}
 }
