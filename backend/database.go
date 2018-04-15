@@ -3,24 +3,13 @@ package backend
 import (
 	"database/sql"
 
-	"heupr/backend/response"
-	"heupr/backend/response/preprocess"
+	"heupr/backend/process"
+	"heupr/backend/process/preprocess"
 )
 
-type integration struct {
-	installationID int64
-	appID          int
-	repoID         int64
-}
-
-type settings struct {
-	Title  string
-	Issues map[string]map[string]response.Options
-}
-
 type dataAccess interface {
-	readIntegrations(query string) (map[int64]*integration, error)
-	readSettings(query string) (map[int64]*settings, error)
+	readIntegrations(query string) (map[int64]*process.Integration, error)
+	readSettings(query string) (map[int64]*process.Setting, error)
 	readEvents(query string) (map[int64][]*preprocess.Container, error)
 }
 
@@ -33,14 +22,14 @@ type database struct {
 	sqlDB sqlDB
 }
 
-func (d *database) readIntegrations(query string) (map[int64]*integration, error) {
+func (d *database) readIntegrations(query string) (map[int64]*process.Integration, error) {
 	// reads in all integrations; called by Start()
 	// note that the returned map key will be redundant to integration.repoID
 	// note the argument may make this flexible to also be called by tick()
 	return nil, nil
 }
 
-func (d *database) readSettings(query string) (map[int64]*settings, error) {
+func (d *database) readSettings(query string) (map[int64]*process.Setting, error) {
 	// reads in all settings; called by Start
 	return nil, nil
 }

@@ -1,4 +1,4 @@
-package backend
+package process
 
 import (
 	"sync"
@@ -9,22 +9,26 @@ import (
 	"heupr/backend/response"
 )
 
-type repo struct {
+type Repo struct {
 	sync.Mutex
-	id        int64
-	settings  *settings
+	setting   *Setting
 	client    *github.Client
 	responses map[string]map[string]*response.Action
 }
 
-func (r *repo) parseResponses(settings *settings) error {
-	if r.id <= 0 {
-		return errors.Errorf("invalid repo id %d", r.id)
+type Repos struct {
+	sync.RWMutex
+	Internal map[int64]*Repo
+}
+
+func (r *Repo) parseSettings(s *Setting, id int64) error {
+	if id == 0 {
+		return errors.New("repo id not found")
 	}
 
 	responses := make(map[string]map[string]*response.Action)
 
-	for action, opts := range settings.Issues {
+	for action, opts := range s.Issues {
 		for name, opt := range opts {
 			if resp, ok := r.responses["issues-"+action][name]; ok {
 				resp.Options = opt
@@ -43,16 +47,16 @@ func (r *repo) parseResponses(settings *settings) error {
 		}
 	}
 
-	r.settings = settings
+	r.setting = s
 	r.responses = responses
 
 	return nil
 }
 
-var newRepo = func(settings *settings, i *integration) (*repo, error) {
-	repo := &repo{id: i.repoID}
+var NewRepo = func(set *Setting, i *Integration) (*Repo, error) {
+	r := new(Repo)
 
-	if err := repo.parseResponses(settings); err != nil {
+	if err := r.parseSettings(set, i.RepoID); err != nil {
 		return nil, errors.Errorf("parse settings error: %v", err)
 	}
 
@@ -61,5 +65,5 @@ var newRepo = func(settings *settings, i *integration) (*repo, error) {
 	// [ ] call training methods for necessary responses
 	// [ ] call through spun up goroutines use sync.WaitGroup to coordinate
 
-	return repo, nil
+	return r, nil
 }

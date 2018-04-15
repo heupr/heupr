@@ -2,8 +2,10 @@ package backend
 
 import (
 	"database/sql"
-	"sync"
+	"fmt"
 	"time"
+
+	"heupr/backend/process"
 )
 
 var (
@@ -12,18 +14,13 @@ var (
 	eventsQuery      = ``
 )
 
-type repos struct {
-	sync.RWMutex
-	internal map[int64]*repo
-}
-
 // Server hosts backend in-memory active repos and access to the database as
 // well as channels for processing incoming work.
 type Server struct {
 	database dataAccess
-	work     chan *work
-	workers  chan chan *work
-	repos    *repos
+	work     chan *process.Work
+	workers  chan chan *process.Work
+	repos    *process.Repos
 }
 
 // openDatabase is designed to be overridden in unit testing.
@@ -36,9 +33,15 @@ var openDatabase = func() (dataAccess, error) {
 }
 
 // openQueues is another function to override in unit testing.
-var openQueues = func() (chan *work, chan chan *work) {
-	return make(chan *work), make(chan chan *work)
+var openQueues = func() (chan *process.Work, chan chan *process.Work) {
+	return make(chan *process.Work), make(chan chan *process.Work)
 }
+
+var (
+	newRepo    = process.NewRepo
+	dispatcher = process.Dispatcher
+	collector  = process.Collector
+)
 
 // Start is exported so that cmd/ has access to launch the backend.
 func (s *Server) Start() {
@@ -49,8 +52,8 @@ func (s *Server) Start() {
 	s.work = workQueue
 	s.workers = workerQueue
 
-	s.repos = &repos{
-		internal: make(map[int64]*repo),
+	s.repos = &process.Repos{
+		Internal: make(map[int64]*process.Repo),
 	}
 
 	integrations, _ := s.database.readIntegrations(integrationQuery)
@@ -58,9 +61,9 @@ func (s *Server) Start() {
 
 	for i := range integrations {
 		// TODO: There should likely be a check for settings[i] existence.
-		repo, _ := newRepo(settings[i], integrations[i])
+		repo, _ := process.NewRepo(settings[i], integrations[i])
 		s.repos.Lock()
-		s.repos.internal[integrations[i].repoID] = repo
+		s.repos.Internal[integrations[i].RepoID] = repo
 		s.repos.Unlock()
 	}
 
@@ -74,7 +77,7 @@ var (
 	newEventsQuery       = ``
 )
 
-func (s *Server) tick(ender chan bool, workQueue chan *work, workerQueue chan chan *work) {
+func (s *Server) tick(ender chan bool, workQueue chan *process.Work, workerQueue chan chan *process.Work) {
 	ticker := time.NewTicker(time.Second * 5)
 
 	dispatcher(s.repos, workQueue, workerQueue)
@@ -87,24 +90,25 @@ func (s *Server) tick(ender chan bool, workQueue chan *work, workerQueue chan ch
 				settings, _ := s.database.readSettings(newSettingsQuery)
 				events, _ := s.database.readEvents(newEventsQuery)
 
-				w := make(map[int64]*work)
+				w := make(map[int64]*process.Work)
+                fmt.Println("debug", w) // TEMPORARY
 
 				for k, i := range integrations {
-					w[k] = &work{
-						repoID:      k,
-						integration: i,
+					w[k] = &process.Work{
+						RepoID:      k,
+						Integration: i,
 					}
 				}
 				for k, s := range settings {
-					w[k] = &work{
-						repoID:   k,
-						settings: s,
+					w[k] = &process.Work{
+						RepoID:  k,
+						Setting: s,
 					}
 				}
 				for k, e := range events {
-					w[k] = &work{
-						repoID: k,
-						events: e,
+					w[k] = &process.Work{
+						RepoID: k,
+						Events: e,
 					}
 				}
 

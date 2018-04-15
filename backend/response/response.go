@@ -1,6 +1,6 @@
 package response
 
-import "heupr/backend/response/preprocess"
+import "heupr/backend/process/preprocess"
 
 // Options provides user settings to selected Actions
 type Options struct {
