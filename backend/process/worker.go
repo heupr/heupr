@@ -1,24 +1,27 @@
 package process
 
 import (
-	"heupr/backend/response"
 	"heupr/backend/process/preprocess"
+	"heupr/backend/response"
 )
 
+// Integration represents a new Heupr GitHub integration.
 type Integration struct {
 	InstallationID int64
 	AppID          int
 	RepoID         int64
 }
 
-type Setting struct {
+// Settings represents the parsed .heupr.toml file for user settings.
+type Settings struct {
 	Title  string
 	Issues map[string]map[string]response.Options
 }
 
+// Work holds the objects necessary for processing by the responses.
 type Work struct {
 	RepoID      int64
-	Setting     *Setting
+	Settings    *Settings
 	Integration *Integration
 	Events      []*preprocess.Container
 }
@@ -37,19 +40,19 @@ func (w *worker) start() {
 			w.workers <- w.work
 			select {
 			case wk := <-w.work:
-				if wk.Integration != nil && wk.Setting != nil {
-					r, err := NewRepo(wk.Setting, wk.Integration)
+				if wk.Integration != nil && wk.Settings != nil {
+					r, err := NewRepo(wk.Settings, wk.Integration)
 					_ = err // TODO: Log this result.
 					w.repos.Lock()
 					w.repos.Internal[wk.RepoID] = r
 					w.repos.Unlock()
-				} else if wk.Integration == nil && wk.Setting != nil {
+				} else if wk.Integration == nil && wk.Settings != nil {
 					w.repos.RLock()
 					r, ok := w.repos.Internal[wk.RepoID]
 					w.repos.RUnlock()
 					_ = ok // TODO: Log this result.
 					// TODO: This might need a lock as well?
-					err := r.parseSettings(wk.Setting, wk.RepoID)
+					err := r.parseResponses(wk.Settings, wk.RepoID)
 					_ = err // TODO: Log this result.
 				}
 
@@ -63,6 +66,7 @@ func (w *worker) start() {
 	}()
 }
 
+// Dispatcher initializes and starts workers to receive incoming work.
 var Dispatcher = func(r *Repos, workQueue chan *Work, workerQueue chan chan *Work) {
 	for i := 0; i < cap(workerQueue); i++ {
 		w := &worker{
@@ -86,6 +90,7 @@ var Dispatcher = func(r *Repos, workQueue chan *Work, workerQueue chan chan *Wor
 	}()
 }
 
+// Collector distributes new work objects to active workers.
 var Collector = func(wk map[int64]*Work, workQueue chan *Work) {
 	if len(wk) != 0 {
 		for _, w := range wk {

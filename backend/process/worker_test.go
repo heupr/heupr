@@ -7,21 +7,21 @@ import (
 
 func Test_start(t *testing.T) {
 	w := &worker{
-		work:    make(chan *work),
-		workers: make(chan chan *work),
-		repos: &repos{
-			internal: make(map[int64]*repo),
+		work:    make(chan *Work),
+		workers: make(chan chan *Work),
+		repos: &Repos{
+			Internal: make(map[int64]*Repo),
 		},
 		quit: make(chan bool),
 	}
 
 	tests := []struct {
 		desc string
-		wk   *work
-		expt *repos
+		wk   *Work
+		expt *Repos
 		pass bool
 	}{
-		{"empty work and worker arguments", new(work), &repos{internal: make(map[int64]*repo)}, false},
+		{"empty work and worker arguments", &Work{}, &Repos{Internal: make(map[int64]*Repo)}, false},
 	}
 
 	for i := range tests {
@@ -41,30 +41,30 @@ func Test_start(t *testing.T) {
 func Test_collector(t *testing.T) {
 	tests := []struct {
 		desc  string
-		work  map[int64]*work
+		work  map[int64]*Work
 		count int
 	}{
 		{"empty work map", nil, 0},
 		{
 			"one work object",
-			map[int64]*work{
-				int64(94): &work{},
+			map[int64]*Work{
+				int64(94): &Work{},
 			},
 			1,
 		},
 		{
 			"two work objects",
-			map[int64]*work{
-				int64(5555): &work{},
-				int64(4907): &work{},
+			map[int64]*Work{
+				int64(5555): &Work{},
+				int64(4907): &Work{},
 			},
 			2,
 		},
 	}
 
 	for i := range tests {
-		queue := make(chan *work, 100)
-		collector(tests[i].work, queue)
+		queue := make(chan *Work, 100)
+		Collector(tests[i].work, queue)
 		exp, rec := tests[i].count, len(queue)
 		if exp != rec {
 			t.Errorf("test #%v desc: %v, channel length expected %v, received %v", i+1, tests[i].desc, exp, rec)

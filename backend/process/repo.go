@@ -9,19 +9,22 @@ import (
 	"heupr/backend/response"
 )
 
+// Repo represents an active GitHub repository.
 type Repo struct {
 	sync.Mutex
-	setting   *Setting
+	ID        int64
+	settings  *Settings
 	client    *github.Client
 	responses map[string]map[string]*response.Action
 }
 
+// Repos provides a concurrency-safety wrap around the Repo map.
 type Repos struct {
 	sync.RWMutex
 	Internal map[int64]*Repo
 }
 
-func (r *Repo) parseSettings(s *Setting, id int64) error {
+func (r *Repo) parseResponses(s *Settings, id int64) error {
 	if id == 0 {
 		return errors.New("repo id not found")
 	}
@@ -47,16 +50,17 @@ func (r *Repo) parseSettings(s *Setting, id int64) error {
 		}
 	}
 
-	r.setting = s
+	r.settings = s
 	r.responses = responses
 
 	return nil
 }
 
-var NewRepo = func(set *Setting, i *Integration) (*Repo, error) {
+// NewRepo is a helper function to create a new Repo instance.
+var NewRepo = func(set *Settings, i *Integration) (*Repo, error) {
 	r := new(Repo)
 
-	if err := r.parseSettings(set, i.RepoID); err != nil {
+	if err := r.parseResponses(set, i.RepoID); err != nil {
 		return nil, errors.Errorf("parse settings error: %v", err)
 	}
 
