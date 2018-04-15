@@ -8,7 +8,7 @@ import (
 
 type startTestDB struct {
 	intg map[int64]*integration
-	sets map[int64]*setting
+	sets map[int64]*settings
 	evts map[int64][]*preprocess.Container
 }
 
@@ -16,7 +16,7 @@ func (s *startTestDB) readIntegrations(query string) (map[int64]*integration, er
 	return s.intg, nil
 }
 
-func (s *startTestDB) readSettings(query string) (map[int64]*setting, error) {
+func (s *startTestDB) readSettings(query string) (map[int64]*settings, error) {
 	return s.sets, nil
 }
 
@@ -30,7 +30,7 @@ func TestStart(t *testing.T) {
 	tests := []struct {
 		desc string
 		intg map[int64]*integration
-		sets map[int64]*setting
+		sets map[int64]*settings
 		repo *repo
 		err  error
 		expt int
@@ -43,8 +43,8 @@ func TestStart(t *testing.T) {
 					repoID: int64(66),
 				},
 			},
-			map[int64]*setting{
-				int64(66): &setting{},
+			map[int64]*settings{
+				int64(66): &settings{},
 			},
 			&repo{},
 			nil,
@@ -60,7 +60,7 @@ func TestStart(t *testing.T) {
 			}
 			return db, nil
 		}
-		newRepo = func(set *setting, intg *integration) (*repo, error) {
+		newRepo = func(set *settings, intg *integration) (*repo, error) {
 			return tests[i].repo, tests[i].err
 		}
 

@@ -11,19 +11,20 @@ import (
 
 type repo struct {
 	sync.Mutex
-	setting   *setting
+	id        int64
+	settings  *settings
 	client    *github.Client
 	responses map[string]map[string]*response.Action
 }
 
-func (r *repo) parseSettings(s *setting, id int64) error {
-	if id == 0 {
-		return errors.New("repo id not found")
+func (r *repo) parseResponses(settings *settings) error {
+	if r.id <= 0 {
+		return errors.Errorf("invalid repo id %d", r.id)
 	}
 
 	responses := make(map[string]map[string]*response.Action)
 
-	for action, opts := range s.Issues {
+	for action, opts := range settings.Issues {
 		for name, opt := range opts {
 			if resp, ok := r.responses["issues-"+action][name]; ok {
 				resp.Options = opt
@@ -42,16 +43,16 @@ func (r *repo) parseSettings(s *setting, id int64) error {
 		}
 	}
 
-	r.setting = s
+	r.settings = settings
 	r.responses = responses
 
 	return nil
 }
 
-var newRepo = func(set *setting, i *integration) (*repo, error) {
-	r := new(repo)
+var newRepo = func(settings *settings, i *integration) (*repo, error) {
+	repo := &repo{id: i.repoID}
 
-	if err := r.parseSettings(set, i.repoID); err != nil {
+	if err := repo.parseResponses(settings); err != nil {
 		return nil, errors.Errorf("parse settings error: %v", err)
 	}
 
@@ -60,5 +61,5 @@ var newRepo = func(set *setting, i *integration) (*repo, error) {
 	// [ ] call training methods for necessary responses
 	// [ ] call through spun up goroutines use sync.WaitGroup to coordinate
 
-	return r, nil
+	return repo, nil
 }

@@ -97,8 +97,8 @@ func (s *Server) tick(ender chan bool, workQueue chan *work, workerQueue chan ch
 				}
 				for k, s := range settings {
 					w[k] = &work{
-						repoID:  k,
-						setting: s,
+						repoID:   k,
+						settings: s,
 					}
 				}
 				for k, e := range events {
