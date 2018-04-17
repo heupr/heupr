@@ -67,7 +67,7 @@ func (w *worker) start() {
 }
 
 // Dispatcher initializes and starts workers to receive incoming work.
-var Dispatcher = func(r *Repos, workQueue chan *Work, workerQueue chan chan *Work) {
+func Dispatcher(r *Repos, workQueue chan *Work, workerQueue chan chan *Work) {
 	for i := 0; i < cap(workerQueue); i++ {
 		w := &worker{
 			id:      i + 1,
@@ -91,7 +91,7 @@ var Dispatcher = func(r *Repos, workQueue chan *Work, workerQueue chan chan *Wor
 }
 
 // Collector distributes new work objects to active workers.
-var Collector = func(wk map[int64]*Work, workQueue chan *Work) {
+func Collector(wk map[int64]*Work, workQueue chan *Work) {
 	if len(wk) != 0 {
 		for _, w := range wk {
 			workQueue <- w
