@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 	// "time"
+	// "sync"
 
 	"heupr/backend/process"
 	"heupr/backend/process/preprocess"
@@ -11,7 +12,7 @@ import (
 
 type startTestDB struct {
 	intg map[int64]*process.Integration
-	sets map[int64]*process.Setting
+	sets map[int64]*process.Settings
 	evts map[int64][]*preprocess.Container
 }
 
@@ -19,7 +20,7 @@ func (s *startTestDB) readIntegrations(query string) (map[int64]*process.Integra
 	return s.intg, nil
 }
 
-func (s *startTestDB) readSettings(query string) (map[int64]*process.Setting, error) {
+func (s *startTestDB) readSettings(query string) (map[int64]*process.Settings, error) {
 	return s.sets, nil
 }
 
@@ -34,7 +35,7 @@ func TestStart(t *testing.T) {
 	tests := []struct {
 		desc string
 		intg map[int64]*process.Integration
-		sets map[int64]*process.Setting
+		sets map[int64]*process.Settings
 		repo *process.Repo
 		err  error
 		expt int
@@ -47,8 +48,8 @@ func TestStart(t *testing.T) {
 					RepoID: int64(66),
 				},
 			},
-			map[int64]*process.Setting{
-				int64(66): &process.Setting{},
+			map[int64]*process.Settings{
+				int64(66): &process.Settings{},
 			},
 			&process.Repo{},
 			nil,
@@ -64,7 +65,7 @@ func TestStart(t *testing.T) {
 			}
 			return db, nil
 		}
-		newRepo = func(set *process.Setting, intg *process.Integration) (*process.Repo, error) {
+		newRepo = func(set *process.Settings, intg *process.Integration) (*process.Repo, error) {
 			return tests[i].repo, tests[i].err
 		}
 
@@ -88,7 +89,7 @@ func Test_tick(t *testing.T) {
 	tests := []struct {
 		desc string
 		intg map[int64]*process.Integration
-		sets map[int64]*process.Setting
+		sets map[int64]*process.Settings
 		evts map[int64][]*preprocess.Container
 		expt map[int64]*process.Work
 	}{
@@ -114,7 +115,6 @@ func Test_tick(t *testing.T) {
 	}
 
 	for i := range tests {
-		ender := make(chan bool)
 		s := &Server{
 			database: &startTestDB{
 				intg: tests[i].intg,
@@ -126,6 +126,7 @@ func Test_tick(t *testing.T) {
 			repos:   &process.Repos{},
 		}
 
+		ender := make(chan bool)
 		s.tick(ender)
 		ender <- true
 

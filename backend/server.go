@@ -91,8 +91,8 @@ func (s *Server) tick(ender chan bool) {
 			}
 			for k, s := range settings {
 				w[k] = &process.Work{
-					RepoID:  k,
-					Setting: s,
+					RepoID:   k,
+					Settings: s,
 				}
 			}
 			for k, e := range events {
