@@ -3,7 +3,7 @@ package process
 import (
 	"testing"
 
-	"heupr/backend/response"
+	"heupr/backend/process/preprocess"
 )
 
 func ptrInt64(input int64) *int64 {
@@ -14,18 +14,18 @@ func Test_parseResponses(t *testing.T) {
 	tests := []struct {
 		desc string
 		repo *Repo
-		sets *Settings
+		sets *preprocess.Settings
 		id   int64
 		pass bool
 	}{
-		{"empty repo method pointer", &Repo{}, &Settings{}, int64(0), false},
+		{"empty repo method pointer", &Repo{}, &preprocess.Settings{}, int64(0), false},
 		{
 			"incorrect response name",
 			&Repo{},
-			&Settings{
-				Issues: map[string]map[string]response.Options{
-					"opened": map[string]response.Options{
-						"fakename": response.Options{},
+			&preprocess.Settings{
+				Issues: map[string]map[string]preprocess.Options{
+					"opened": map[string]preprocess.Options{
+						"fakename": preprocess.Options{},
 					},
 				},
 			},
@@ -44,12 +44,12 @@ func Test_parseResponses(t *testing.T) {
 func Test_newRepo(t *testing.T) {
 	tests := []struct {
 		desc string
-		sets *Settings
-		intg *Integration
+		sets *preprocess.Settings
+		intg *preprocess.Integration
 		expt *Repo
 		pass bool
 	}{
-		{"no repo id in settings", &Settings{}, &Integration{}, nil, false},
+		{"no repo id in settings", &preprocess.Settings{}, &preprocess.Integration{}, nil, false},
 		// {"no repo found on server", &setting{Integration: integration{repoID: ptrInt64(66)}}, nil, false},
 	}
 

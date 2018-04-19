@@ -2,17 +2,6 @@ package response
 
 import "heupr/backend/process/preprocess"
 
-// Options provides user settings to selected Actions
-type Options struct {
-	// Assignment response options
-	Blacklist []string
-	AsComment bool
-	Count     int
-	// Label response options
-	Default []string
-	Types   []string
-}
-
 // Model is used for complicated response features.
 type Model interface {
 	Learn(input []*preprocess.Container) error
@@ -26,7 +15,7 @@ type Conditional interface {
 
 // Action houses Options for responses and the required normalization.
 type Action struct {
-	Options     Options
+	Options     preprocess.Options
 	Model       Model
 	Conditional Conditional
 }

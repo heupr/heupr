@@ -1,35 +1,11 @@
 package process
 
-import (
-	"heupr/backend/process/preprocess"
-	"heupr/backend/response"
-)
-
-// Integration represents a new Heupr GitHub integration.
-type Integration struct {
-	InstallationID int64
-	AppID          int
-	RepoID         int64
-}
-
-// Settings represents the parsed .heupr.toml file for user settings.
-type Settings struct {
-	Title  string
-	Issues map[string]map[string]response.Options
-}
-
-// Work holds the objects necessary for processing by the responses.
-type Work struct {
-	RepoID      int64
-	Settings    *Settings
-	Integration *Integration
-	Events      []*preprocess.Container
-}
+import "heupr/backend/process/preprocess"
 
 type worker struct {
 	id      int
-	work    chan *Work
-	workers chan chan *Work
+	work    chan *preprocess.Work
+	workers chan chan *preprocess.Work
 	repos   *Repos
 	quit    chan bool
 }
@@ -67,11 +43,11 @@ func (w *worker) start() {
 }
 
 // Dispatcher initializes and starts workers to receive incoming work.
-func Dispatcher(r *Repos, workQueue chan *Work, workerQueue chan chan *Work) {
+func Dispatcher(r *Repos, workQueue chan *preprocess.Work, workerQueue chan chan *preprocess.Work) {
 	for i := 0; i < cap(workerQueue); i++ {
 		w := &worker{
 			id:      i + 1,
-			work:    make(chan *Work),
+			work:    make(chan *preprocess.Work),
 			workers: workerQueue,
 			repos:   r,
 			quit:    make(chan bool),
@@ -91,7 +67,7 @@ func Dispatcher(r *Repos, workQueue chan *Work, workerQueue chan chan *Work) {
 }
 
 // Collector distributes new work objects to active workers.
-func Collector(wk map[int64]*Work, workQueue chan *Work) {
+func Collector(wk map[int64]*preprocess.Work, workQueue chan *preprocess.Work) {
 	if len(wk) != 0 {
 		for _, w := range wk {
 			workQueue <- w

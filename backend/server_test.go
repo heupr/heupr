@@ -11,16 +11,16 @@ import (
 )
 
 type startTestDB struct {
-	intg map[int64]*process.Integration
-	sets map[int64]*process.Settings
+	intg map[int64]*preprocess.Integration
+	sets map[int64]*preprocess.Settings
 	evts map[int64][]*preprocess.Container
 }
 
-func (s *startTestDB) readIntegrations(query string) (map[int64]*process.Integration, error) {
+func (s *startTestDB) readIntegrations(query string) (map[int64]*preprocess.Integration, error) {
 	return s.intg, nil
 }
 
-func (s *startTestDB) readSettings(query string) (map[int64]*process.Settings, error) {
+func (s *startTestDB) readSettings(query string) (map[int64]*preprocess.Settings, error) {
 	return s.sets, nil
 }
 
@@ -34,8 +34,8 @@ func TestStart(t *testing.T) {
 
 	tests := []struct {
 		desc string
-		intg map[int64]*process.Integration
-		sets map[int64]*process.Settings
+		intg map[int64]*preprocess.Integration
+		sets map[int64]*preprocess.Settings
 		repo *process.Repo
 		err  error
 		expt int
@@ -43,13 +43,13 @@ func TestStart(t *testing.T) {
 		{"all database tables empty", nil, nil, nil, nil, 0},
 		{
 			"single repo added",
-			map[int64]*process.Integration{
-				int64(66): &process.Integration{
+			map[int64]*preprocess.Integration{
+				int64(66): &preprocess.Integration{
 					RepoID: int64(66),
 				},
 			},
-			map[int64]*process.Settings{
-				int64(66): &process.Settings{},
+			map[int64]*preprocess.Settings{
+				int64(66): &preprocess.Settings{},
 			},
 			&process.Repo{},
 			nil,
@@ -65,7 +65,7 @@ func TestStart(t *testing.T) {
 			}
 			return db, nil
 		}
-		newRepo = func(set *process.Settings, intg *process.Integration) (*process.Repo, error) {
+		newRepo = func(set *preprocess.Settings, intg *preprocess.Integration) (*process.Repo, error) {
 			return tests[i].repo, tests[i].err
 		}
 
@@ -79,34 +79,34 @@ func TestStart(t *testing.T) {
 }
 
 func Test_tick(t *testing.T) {
-	dispatcher = func(r *process.Repos, workQueue chan *process.Work, workerQueue chan chan *process.Work) {}
+	dispatcher = func(r *process.Repos, workQueue chan *preprocess.Work, workerQueue chan chan *preprocess.Work) {}
 
-	result := make(map[int64]*process.Work)
-	collector = func(wk map[int64]*process.Work, workQueue chan *process.Work) {
+	result := make(map[int64]*preprocess.Work)
+	collector = func(wk map[int64]*preprocess.Work, workQueue chan *preprocess.Work) {
 		result = wk
 	}
 
 	tests := []struct {
 		desc string
-		intg map[int64]*process.Integration
-		sets map[int64]*process.Settings
+		intg map[int64]*preprocess.Integration
+		sets map[int64]*preprocess.Settings
 		evts map[int64][]*preprocess.Container
-		expt map[int64]*process.Work
+		expt map[int64]*preprocess.Work
 	}{
-		{"no values returned from database", nil, nil, nil, make(map[int64]*process.Work)},
+		{"no values returned from database", nil, nil, nil, make(map[int64]*preprocess.Work)},
 		{
 			"single integration value in database",
-			map[int64]*process.Integration{
-				int64(50): &process.Integration{
+			map[int64]*preprocess.Integration{
+				int64(50): &preprocess.Integration{
 					RepoID: int64(50),
 				},
 			},
 			nil,
 			nil,
-			map[int64]*process.Work{
-				int64(50): &process.Work{
+			map[int64]*preprocess.Work{
+				int64(50): &preprocess.Work{
 					RepoID: int64(50),
-					Integration: &process.Integration{
+					Integration: &preprocess.Integration{
 						RepoID: int64(50),
 					},
 				},
@@ -121,8 +121,8 @@ func Test_tick(t *testing.T) {
 				sets: tests[i].sets,
 				evts: tests[i].evts,
 			},
-			work:    make(chan *process.Work),
-			workers: make(chan chan *process.Work),
+			work:    make(chan *preprocess.Work),
+			workers: make(chan chan *preprocess.Work),
 			repos:   &process.Repos{},
 		}
 

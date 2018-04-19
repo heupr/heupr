@@ -3,13 +3,12 @@ package backend
 import (
 	"database/sql"
 
-	"heupr/backend/process"
 	"heupr/backend/process/preprocess"
 )
 
 type dataAccess interface {
-	readIntegrations(query string) (map[int64]*process.Integration, error)
-	readSettings(query string) (map[int64]*process.Settings, error)
+	readIntegrations(query string) (map[int64]*preprocess.Integration, error)
+	readSettings(query string) (map[int64]*preprocess.Settings, error)
 	readEvents(query string) (map[int64][]*preprocess.Container, error)
 }
 
@@ -22,14 +21,14 @@ type database struct {
 	sqlDB sqlDB
 }
 
-func (d *database) readIntegrations(query string) (map[int64]*process.Integration, error) {
+func (d *database) readIntegrations(query string) (map[int64]*preprocess.Integration, error) {
 	// reads in all integrations; called by Start()
 	// note that the returned map key will be redundant to integration.repoID
 	// note the argument may make this flexible to also be called by tick()
 	return nil, nil
 }
 
-func (d *database) readSettings(query string) (map[int64]*process.Settings, error) {
+func (d *database) readSettings(query string) (map[int64]*preprocess.Settings, error) {
 	// reads in all settings; called by Start
 	return nil, nil
 }

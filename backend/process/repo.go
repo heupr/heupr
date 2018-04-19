@@ -6,6 +6,7 @@ import (
 	"github.com/google/go-github/github"
 	"github.com/pkg/errors"
 
+	"heupr/backend/process/preprocess"
 	"heupr/backend/response"
 )
 
@@ -13,7 +14,7 @@ import (
 type Repo struct {
 	sync.Mutex
 	ID        int64
-	settings  *Settings
+	settings  *preprocess.Settings
 	client    *github.Client
 	responses map[string]map[string]*response.Action
 }
@@ -24,7 +25,7 @@ type Repos struct {
 	Internal map[int64]*Repo
 }
 
-func (r *Repo) parseResponses(s *Settings, id int64) error {
+func (r *Repo) parseResponses(s *preprocess.Settings, id int64) error {
 	if id == 0 {
 		return errors.New("repo id not found")
 	}
@@ -57,7 +58,7 @@ func (r *Repo) parseResponses(s *Settings, id int64) error {
 }
 
 // NewRepo is a helper function to create a new Repo instance.
-var NewRepo = func(set *Settings, i *Integration) (*Repo, error) {
+var NewRepo = func(set *preprocess.Settings, i *preprocess.Integration) (*Repo, error) {
 	r := new(Repo)
 
 	if err := r.parseResponses(set, i.RepoID); err != nil {

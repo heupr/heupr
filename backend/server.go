@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"heupr/backend/process"
+	"heupr/backend/process/preprocess"
 )
 
 var (
@@ -17,8 +18,8 @@ var (
 // well as channels for processing incoming work.
 type Server struct {
 	database dataAccess
-	work     chan *process.Work
-	workers  chan chan *process.Work
+	work     chan *preprocess.Work
+	workers  chan chan *preprocess.Work
 	repos    *process.Repos
 }
 
@@ -42,8 +43,8 @@ func (s *Server) Start() {
 	db, _ := openDatabase()
 	s.database = db
 
-	s.work = make(chan *process.Work)
-	s.workers = make(chan chan *process.Work)
+	s.work = make(chan *preprocess.Work)
+	s.workers = make(chan chan *preprocess.Work)
 
 	s.repos = &process.Repos{
 		Internal: make(map[int64]*process.Repo),
@@ -81,22 +82,22 @@ func (s *Server) tick(ender chan bool) {
 			settings, _ := s.database.readSettings(newSettingsQuery)
 			events, _ := s.database.readEvents(newEventsQuery)
 
-			w := make(map[int64]*process.Work)
+			w := make(map[int64]*preprocess.Work)
 
 			for k, i := range integrations {
-				w[k] = &process.Work{
+				w[k] = &preprocess.Work{
 					RepoID:      k,
 					Integration: i,
 				}
 			}
 			for k, s := range settings {
-				w[k] = &process.Work{
+				w[k] = &preprocess.Work{
 					RepoID:   k,
 					Settings: s,
 				}
 			}
 			for k, e := range events {
-				w[k] = &process.Work{
+				w[k] = &preprocess.Work{
 					RepoID: k,
 					Events: e,
 				}
