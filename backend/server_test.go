@@ -3,8 +3,6 @@ package backend
 import (
 	"reflect"
 	"testing"
-	// "time"
-	// "sync"
 
 	"heupr/backend/process"
 	"heupr/backend/process/preprocess"
@@ -28,55 +26,55 @@ func (s *startTestDB) readEvents(query string) (map[int64][]*preprocess.Containe
 	return s.evts, nil
 }
 
-func TestStart(t *testing.T) {
-	// TODO: For each test pass in true to the close map right away.
-	s := &Server{}
-
-	tests := []struct {
-		desc string
-		intg map[int64]*preprocess.Integration
-		sets map[int64]*preprocess.Settings
-		repo *process.Repo
-		err  error
-		expt int
-	}{
-		{"all database tables empty", nil, nil, nil, nil, 0},
-		{
-			"single repo added",
-			map[int64]*preprocess.Integration{
-				int64(66): &preprocess.Integration{
-					RepoID: int64(66),
-				},
-			},
-			map[int64]*preprocess.Settings{
-				int64(66): &preprocess.Settings{},
-			},
-			&process.Repo{},
-			nil,
-			1,
-		},
-	}
-
-	for i := range tests {
-		openDatabase = func() (dataAccess, error) {
-			db := &startTestDB{
-				intg: tests[i].intg,
-				sets: tests[i].sets,
-			}
-			return db, nil
-		}
-		newRepo = func(set *preprocess.Settings, intg *preprocess.Integration) (*process.Repo, error) {
-			return tests[i].repo, tests[i].err
-		}
-
-		s.Start()
-
-		exp, rec := tests[i].expt, len(s.repos.Internal)
-		if exp != rec {
-			t.Errorf("test #%v desc: %v, internal map expected length %v, received %v", i+1, tests[i].desc, exp, rec)
-		}
-	}
-}
+// func TestStart(t *testing.T) {
+// 	// TODO: For each test pass in true to the close map right away.
+// 	s := &Server{}
+//
+// 	tests := []struct {
+// 		desc string
+// 		intg map[int64]*preprocess.Integration
+// 		sets map[int64]*preprocess.Settings
+// 		repo *process.Repo
+// 		err  error
+// 		expt int
+// 	}{
+// 		{"all database tables empty", nil, nil, nil, nil, 0},
+// 		{
+// 			"single repo added",
+// 			map[int64]*preprocess.Integration{
+// 				int64(66): &preprocess.Integration{
+// 					RepoID: int64(66),
+// 				},
+// 			},
+// 			map[int64]*preprocess.Settings{
+// 				int64(66): &preprocess.Settings{},
+// 			},
+// 			&process.Repo{},
+// 			nil,
+// 			1,
+// 		},
+// 	}
+//
+// 	for i := range tests {
+// 		openDatabase = func() (dataAccess, error) {
+// 			db := &startTestDB{
+// 				intg: tests[i].intg,
+// 				sets: tests[i].sets,
+// 			}
+// 			return db, nil
+// 		}
+// 		newRepo = func(set *preprocess.Settings, intg *preprocess.Integration) (*process.Repo, error) {
+// 			return tests[i].repo, tests[i].err
+// 		}
+//
+// 		s.Start()
+//
+// 		exp, rec := tests[i].expt, len(s.repos.Internal)
+// 		if exp != rec {
+// 			t.Errorf("test #%v desc: %v, internal map expected length %v, received %v", i+1, tests[i].desc, exp, rec)
+// 		}
+// 	}
+// }
 
 func Test_tick(t *testing.T) {
 	dispatcher = func(r *process.Repos, workQueue chan *preprocess.Work, workerQueue chan chan *preprocess.Work) {}
@@ -92,8 +90,9 @@ func Test_tick(t *testing.T) {
 		sets map[int64]*preprocess.Settings
 		evts map[int64][]*preprocess.Container
 		expt map[int64]*preprocess.Work
+		lgth int
 	}{
-		{"no values returned from database", nil, nil, nil, make(map[int64]*preprocess.Work)},
+		{"no values returned from database", nil, nil, nil, make(map[int64]*preprocess.Work), 0},
 		{
 			"single integration value in database",
 			map[int64]*preprocess.Integration{
@@ -111,6 +110,7 @@ func Test_tick(t *testing.T) {
 					},
 				},
 			},
+			1,
 		},
 	}
 
@@ -131,7 +131,7 @@ func Test_tick(t *testing.T) {
 		ender <- true
 
 		exp, rec := tests[i].expt, result
-		if !reflect.DeepEqual(tests[i].expt, result) {
+		if !reflect.DeepEqual(exp, rec) {
 			t.Errorf("test #%v desc: %v, expected map %v, received %v", i+1, tests[i].desc, exp, rec)
 		}
 	}

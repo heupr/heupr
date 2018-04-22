@@ -1,8 +1,6 @@
 package backend
 
-import (
-	"testing"
-)
+import "testing"
 
 var db = database{}
 
