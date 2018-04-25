@@ -2,20 +2,29 @@ package response
 
 import "heupr/backend/process/preprocess"
 
-// Model is used for complicated response features.
+// Model is used for processing incoming events within Containers.
 type Model interface {
 	Learn(input []*preprocess.Container) error
-	Predict(input *preprocess.Container) (interface{}, error)
-}
-
-// Conditional is used for simple response features.
-type Conditional interface {
-	React(input *preprocess.Container) (interface{}, error)
+	Act(input *preprocess.Container, opts *preprocess.Options) (interface{}, error)
 }
 
 // Action houses Options for responses and the required normalization.
 type Action struct {
-	Options     preprocess.Options
-	Model       Model
-	Conditional Conditional
+	Preprocess preprocess.Preprocessor
+	Options    preprocess.Options
+	Model      Model
+}
+
+// Learn is a wrapper to call the given Action's Model Learn method.
+func (a *Action) Learn(input []*preprocess.Container) error {
+	// call preprocess from field value
+	// call learn method
+	// return errors
+}
+
+// Act is a wrapper to call the given Action's Model Act method.
+func (a *Action) Act(input *preprocess.Container) (interface{}, error) {
+	// call act method
+	// pass in input + options field value
+	// return value + errors
 }

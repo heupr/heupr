@@ -1,6 +1,10 @@
 package preprocess
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"github.com/google/go-github/github"
+)
 
 // Options provides user settings to selected Actions
 type Options struct {
@@ -28,11 +32,13 @@ type Integration struct {
 
 // Container is the generalized internal object for processing.
 type Container struct {
-	repoID  int64
-	event   string
-	action  string
-	payload json.RawMessage
-	linked  map[string][]*Container
+	RepoID      int64
+	Event       string
+	Action      string
+	Payload     json.RawMessage
+	Issue       *github.Issue
+	PullRequest *github.PullRequest
+	Linked      map[string][]*Container
 }
 
 // Work holds the objects necessary for processing by the responses.
