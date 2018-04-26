@@ -2,10 +2,31 @@ package itoi
 
 import (
 	"encoding/json"
+	"reflect"
 	"testing"
 
 	"heupr/backend/process/preprocess"
 )
+
+func Test_findIssueNumbers(t *testing.T) {
+	tests := []struct {
+		desc string
+		text string
+		expt []int
+	}{
+		{"no issue references", "test text body", []int{}},
+		{"single issue reference", "Closes #1", []int{1}},
+		{"multiple issue references", "Closes #1 and also Fixes #2", []int{1, 2}},
+	}
+
+	// The production slice keywords is used in this unit test.
+	for i := range tests {
+		output := findIssueNumbers(tests[i].text, keywords)
+		if !reflect.DeepEqual(tests[i].expt, output) {
+			t.Errorf("test %v desc: %v, expected %v, received %v", i+1, tests[i].desc, tests[i].expt, output)
+		}
+	}
+}
 
 func TestPreprocess(t *testing.T) {
 	tests := []struct {
