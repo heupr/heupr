@@ -56,8 +56,8 @@ func (p *P) Preprocess(input []*preprocess.Container) ([]*preprocess.Container, 
 	}
 
 	closers := make(map[int][]*preprocess.Container)
-	_ = closers // TEMPORARY
 	for i := range input {
+		input[i].Linked = make(map[string][]*preprocess.Container)
 		switch input[i].Event {
 		case "issues":
 			evt := &github.IssueEvent{}
@@ -65,14 +65,6 @@ func (p *P) Preprocess(input []*preprocess.Container) ([]*preprocess.Container, 
 				return nil, errors.Wrap(err, "unmarshalling issue event")
 			}
 			input[i].Issue = evt.Issue
-
-			// [ ] check to make sure there is an issue body
-			// - [ ] if not continue w/o analysis
-			// - [ ] if yes pull out title + body texts
-			// [ ] see if linking values included
-			// - [ ] if no do nothing
-			// - [ ] if yes
-
 		case "pull_request":
 			evt := &github.PullRequestEvent{}
 			if err := json.Unmarshal(input[i].Payload, evt); err != nil {
@@ -86,19 +78,19 @@ func (p *P) Preprocess(input []*preprocess.Container) ([]*preprocess.Container, 
 
 			text := *evt.PullRequest.Title + " " + *evt.PullRequest.Body
 			nums := findIssueNumbers(text, keywords)
-			_ = nums
-
-			// [ ] check text for issue references
-			// - [ ] if yes add to temp closers
-			// - [ ] if no continue w/o adding to closers
-			// [ ]
-
+			for _, n := range nums {
+				closers[n] = append(closers[n], input[i])
+			}
 		}
 	}
 
-	// NOTE: Actually pulling out the text objects (title/body) and appending
-	// them together is only done within the individual model implementations
-	// of Learn/Act.
+	for i := range input {
+		if input[i].Issue != nil {
+			if linked, ok := closers[*input[i].Issue.Number]; ok {
+				input[i].Linked["pull_request"] = linked
+			}
+		}
+	}
 
 	return input, nil
 }

@@ -52,7 +52,7 @@ func TestPreprocess(t *testing.T) {
 			[]*preprocess.Container{
 				&preprocess.Container{
 					Event:   "issues",
-					Payload: json.RawMessage(`{"action": "opened","issue":{"id": 1}}`),
+					Payload: json.RawMessage(`{"action":"opened","issue":{"number":1}}`),
 				},
 			},
 			[]int{0},
@@ -63,23 +63,50 @@ func TestPreprocess(t *testing.T) {
 			[]*preprocess.Container{
 				&preprocess.Container{
 					Event:   "issues",
-					Payload: json.RawMessage(`{"action": "opened", "issue":{"id": 2}}`),
+					Payload: json.RawMessage(`{"action":"opened","issue":{"number":2}}`),
 				},
 				&preprocess.Container{
 					Event:   "pull_request",
-					Payload: json.RawMessage(`{"action": "opened", "pull_request":{"id":3,"title":"test title", "body":"test body"}}`),
+					Payload: json.RawMessage(`{"action":"opened","pull_request":{"number":3,"title":"test title","body":"test body"}}`),
 				},
 			},
 			[]int{0, 0},
 			true,
 		},
-		// scenarios:
-		// [X] container with empty values
-		// [X] container with empty issue payload
-		// [X] container with issue event
-		// [ ] container with two objects no reference
-		// [ ] container with two issues one reference
-		// [ ] container with three issues two references (chain)
+		{
+			"one linked pull request",
+			[]*preprocess.Container{
+				&preprocess.Container{
+					Event:   "issues",
+					Payload: json.RawMessage(`{"action":"opened","issue":{"number":4}}`),
+				},
+				&preprocess.Container{
+					Event:   "pull_request",
+					Payload: json.RawMessage(`{"action":"opened","pull_request":{"number":5,"title":"closes issue","body":"Closes #4"}}`),
+				},
+			},
+			[]int{1, 0},
+			true,
+		},
+		{
+			"one pull request referencing two issues",
+			[]*preprocess.Container{
+				&preprocess.Container{
+					Event:   "issues",
+					Payload: json.RawMessage(`{"action":"opened","issue":{"number":6}}`),
+				},
+				&preprocess.Container{
+					Event:   "issues",
+					Payload: json.RawMessage(`{"action":"opened","issue":{"number":7}}`),
+				},
+				&preprocess.Container{
+					Event:   "pull_request",
+					Payload: json.RawMessage(`{"action":"opened","pull_request":{"number":8,"title":"closes two issues","body":"This Fixes #6 and Fixes #7"}}`),
+				},
+			},
+			[]int{1, 1, 0},
+			true,
+		},
 	}
 
 	p := &P{}
