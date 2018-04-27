@@ -1,8 +1,10 @@
 package process
 
 import (
+	"net/http"
 	"sync"
 
+	"github.com/bradleyfalzon/ghinstallation"
 	"github.com/google/go-github/github"
 	"github.com/pkg/errors"
 
@@ -55,6 +57,24 @@ func (r *Repo) parseResponses(s *preprocess.Settings, id int64) error {
 	r.responses = responses
 
 	return nil
+}
+
+// NewClient returns a new GitHub client.
+var NewClient = func(appID, installationID int) *github.Client {
+	key := ""
+	if PROD {
+		key = "heupr.2017-10-04.private-key.pem"
+	} else {
+		key = "mikeheuprtest.2017-11-16.private-key.pem"
+	}
+
+	tr, err := ghinstallation.NewKeyFromFile(http.DefaultTransport, appID, installationID, key)
+	if err != nil {
+		_ = err
+	}
+
+	client := github.NewClient(&http.Client{Transport: tr})
+	return client
 }
 
 // NewRepo is a helper function to create a new Repo instance.

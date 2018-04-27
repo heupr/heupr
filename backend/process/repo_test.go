@@ -41,7 +41,7 @@ func Test_parseResponses(t *testing.T) {
 	}
 }
 
-func Test_newRepo(t *testing.T) {
+func Test_NewRepo(t *testing.T) {
 	tests := []struct {
 		desc string
 		sets *preprocess.Settings

@@ -20,6 +20,7 @@ func (a *Action) Learn(input []*preprocess.Container) error {
 	// call preprocess from field value
 	// call learn method
 	// return errors
+	return nil
 }
 
 // Act is a wrapper to call the given Action's Model Act method.
@@ -27,4 +28,6 @@ func (a *Action) Act(input *preprocess.Container) (interface{}, error) {
 	// call act method
 	// pass in input + options field value
 	// return value + errors
+	results := true // TEMPORARY
+	return results, nil
 }
