@@ -56,7 +56,50 @@ func (w *worker) processHeuprInstallation(event heuprInstallationEvent) {
 }
 
 func (w *worker) processRepoInstallation(event repoInstallationEvent) {
+	go func(e repoInstallationEvent) {
+		switch *e.Action {
+		case "added":
+			repos := make([]heuprRepository, len(e.RepositoriesAdded))
+			for i := 0; i < len(repos); i++ {
+				repos[i] = heuprRepository{
+					ID:       e.RepositoriesAdded[i].ID,
+					Name:     e.RepositoriesAdded[i].Name,
+					FullName: e.RepositoriesAdded[i].FullName,
+				}
+			}
+			// installationEvent := heuprInstallationEvent{
+			// 	Action:       e.Action,
+			// 	Sender:       e.Sender,
+			// 	Installation: e.Installation,
+			// 	Repositories: repos,
+			// }
 
+			client := newClient(*e.Installation.AppID, int(*e.Installation.ID))
+			for i := 0; i < len(e.RepositoriesAdded); i++ {
+				repo, _, err := client.Repositories.GetByID(context.Background(), *e.RepositoriesAdded[i].ID)
+				if err != nil {
+					_ = err
+					return
+				}
+				if w.repoIntegrationExists(*repo.ID) {
+					return
+				}
+				go w.addRepo(repo, client)
+
+				w.database.InsertRepositoryIntegration(*e.Installation.AppID, *repo.ID, *e.Installation.ID)
+			}
+		case "removed":
+			// client := newClient(*e.Installation.AppID, int(*e.Installation.ID))
+			for i := 0; i < len(e.RepositoriesRemoved); i++ {
+				repo := e.RepositoriesRemoved[i]
+				if !w.repoIntegrationExists(*repo.ID) {
+					return
+				}
+				w.database.DeleteRepositoryIntegration(*e.Installation.AppID, *repo.ID, *e.Installation.ID)
+			}
+
+		}
+	}(event)
 }
 
 func (w *worker) addRepo(repo *github.Repository, client *github.Client) {
