@@ -1,6 +1,7 @@
 package ingestor
 
 import (
+	"bytes"
 	"database/sql"
 
 	"github.com/google/go-github/github"
@@ -15,7 +16,9 @@ type dataAccess interface {
 
 type sqlDB interface {
 	Close() error
+	Exec(query string, args ...interface{}) (sql.Result, error)
 	Query(query string, args ...interface{}) (*sql.Rows, error)
+	QueryRow(query string, args ...interface{}) *sql.Row
 }
 
 type database struct {
@@ -49,12 +52,47 @@ type eventQuery struct {
 	Repo string
 }
 
-func (d *database) InsertRepositoryIntegration(appID int, repoID, installationID int64) {}
+func (d *database) InsertRepositoryIntegration(appID int, repoID, installationID int64) {
+	var buffer bytes.Buffer
+	integrationsInsert := "INSERT INTO integrations(repo_id, app_id, installation_id) VALUES"
+	valuesFmt := "(?,?,?)"
 
-func (d *database) DeleteRepositoryIntegration(appID int, repoID, installationID int64) {}
+	buffer.WriteString(integrationsInsert)
+	buffer.WriteString(valuesFmt)
+	result, err := d.sqlDB.Exec(buffer.String(), repoID, appID, installationID)
+	if err != nil {
+		_ = err
+	}
+	rows, _ := result.RowsAffected()
+	_ = rows
+}
 
-func (d *database) ObliterateIntegration(appID int, installationID int64) {}
+func (d *database) DeleteRepositoryIntegration(appID int, repoID, installationID int64) {
+	result, err := d.sqlDB.Exec("DELETE FROM integrations where repo_id = ? and app_id = ? and installation_id = ?", repoID, appID, installationID)
+	if err != nil {
+		_ = err
+	}
+	rows, _ := result.RowsAffected()
+	_ = rows
+}
+
+func (d *database) ObliterateIntegration(appID int, installationID int64) {
+	result, err := d.sqlDB.Exec("DELETE FROM integrations where app_id = ? and installation_id = ?", appID, installationID)
+	if err != nil {
+		_ = err
+	}
+	rows, _ := result.RowsAffected()
+	_ = rows
+}
 
 func (d *database) ReadIntegrationByRepoID(repoID int64) (*integration, error) {
-	return &integration{}, nil
+	intg := new(integration)
+	err := d.sqlDB.QueryRow("SELECT repo_id, app_id, installation_id FROM integrations WHERE repo_id = ?", repoID).Scan(&intg.RepoID, &intg.AppID, &intg.InstallationID)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			_ = err
+		}
+		return nil, err
+	}
+	return intg, nil
 }
