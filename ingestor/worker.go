@@ -1,7 +1,7 @@
 package ingestor
 
 import (
-	"context"
+	"database/sql"
 
 	"github.com/google/go-github/github"
 )
@@ -28,9 +28,9 @@ func (w *worker) processHeuprInstallation(event heuprInstallationEvent) {
 	go func(e heuprInstallationEvent) {
 		switch *e.Action {
 		case "created":
-			client := newClient(*e.Installation.AppID, int(*e.Installation.ID))
+			c := newClient(*e.Installation.AppID, *e.Installation.ID)
 			for i := 0; i < len(e.Repositories); i++ {
-				repo, _, err := client.Repositories.GetByID(context.Background(), *e.Repositories[i].ID)
+				repo, err := c.getRepoByID(*e.Repositories[i].ID)
 				if err != nil {
 					_ = err
 				}
@@ -38,7 +38,7 @@ func (w *worker) processHeuprInstallation(event heuprInstallationEvent) {
 					return
 				}
 
-				go w.addRepo(repo, client)
+				go w.addRepo(repo, c.(*client).githubClient)
 				// TODO: Add logging indicating successfully added a repo.
 
 				w.database.InsertRepositoryIntegration(*e.Installation.AppID, *repo.ID, *e.Installation.ID)
@@ -74,9 +74,9 @@ func (w *worker) processRepoInstallation(event repoInstallationEvent) {
 			// 	Repositories: repos,
 			// }
 
-			client := newClient(*e.Installation.AppID, int(*e.Installation.ID))
+			c := newClient(*e.Installation.AppID, *e.Installation.ID)
 			for i := 0; i < len(e.RepositoriesAdded); i++ {
-				repo, _, err := client.Repositories.GetByID(context.Background(), *e.RepositoriesAdded[i].ID)
+				repo, err := c.getRepoByID(*e.RepositoriesAdded[i].ID)
 				if err != nil {
 					_ = err
 					return
@@ -84,7 +84,7 @@ func (w *worker) processRepoInstallation(event repoInstallationEvent) {
 				if w.repoIntegrationExists(*repo.ID) {
 					return
 				}
-				go w.addRepo(repo, client)
+				go w.addRepo(repo, c.(*client).githubClient)
 
 				w.database.InsertRepositoryIntegration(*e.Installation.AppID, *repo.ID, *e.Installation.ID)
 			}
@@ -107,6 +107,14 @@ func (w *worker) addRepo(repo *github.Repository, client *github.Client) {
 }
 
 func (w *worker) repoIntegrationExists(repoID int64) bool {
-	// TODO: More shit goes here; copy-paste from legacy code.
-	return true
+	_, err := w.database.ReadIntegrationByRepoID(repoID)
+	switch {
+	case err == sql.ErrNoRows:
+		return false
+	case err != nil:
+		_ = err
+		return false
+	default:
+		return true
+	}
 }

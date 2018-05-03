@@ -8,9 +8,9 @@ import (
 )
 
 type dataAccess interface {
-	InsertRepositoryIntegration(appID int, repoID, installationID int64)
-	DeleteRepositoryIntegration(appID int, repoID, installationID int64)
-	ObliterateIntegration(appID int, installationID int64)
+	InsertRepositoryIntegration(appID, repoID, installationID int64)
+	DeleteRepositoryIntegration(appID, repoID, installationID int64)
+	ObliterateIntegration(appID, installationID int64)
 	ReadIntegrationByRepoID(repoID int64) (*integration, error)
 }
 
@@ -35,8 +35,8 @@ type event struct {
 
 type integration struct {
 	RepoID         int64
-	AppID          int
-	InstallationID int
+	AppID          int64
+	InstallationID int64
 }
 
 type eventType int
@@ -52,7 +52,7 @@ type eventQuery struct {
 	Repo string
 }
 
-func (d *database) InsertRepositoryIntegration(appID int, repoID, installationID int64) {
+func (d *database) InsertRepositoryIntegration(appID, repoID, installationID int64) {
 	var buffer bytes.Buffer
 	integrationsInsert := "INSERT INTO integrations(repo_id, app_id, installation_id) VALUES"
 	valuesFmt := "(?,?,?)"
@@ -67,7 +67,7 @@ func (d *database) InsertRepositoryIntegration(appID int, repoID, installationID
 	_ = rows
 }
 
-func (d *database) DeleteRepositoryIntegration(appID int, repoID, installationID int64) {
+func (d *database) DeleteRepositoryIntegration(appID, repoID, installationID int64) {
 	result, err := d.sqlDB.Exec("DELETE FROM integrations where repo_id = ? and app_id = ? and installation_id = ?", repoID, appID, installationID)
 	if err != nil {
 		_ = err
@@ -76,7 +76,7 @@ func (d *database) DeleteRepositoryIntegration(appID int, repoID, installationID
 	_ = rows
 }
 
-func (d *database) ObliterateIntegration(appID int, installationID int64) {
+func (d *database) ObliterateIntegration(appID, installationID int64) {
 	result, err := d.sqlDB.Exec("DELETE FROM integrations where app_id = ? and installation_id = ?", appID, installationID)
 	if err != nil {
 		_ = err

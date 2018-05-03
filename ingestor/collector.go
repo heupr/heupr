@@ -6,7 +6,7 @@ import "github.com/google/go-github/github"
 type heuprInstallation struct {
 	ID              *int64       `json:"id,omitempty"`
 	Account         *github.User `json:"account,omitempty"`
-	AppID           *int         `json:"app_id,omitempty"`
+	AppID           *int64       `json:"app_id,omitempty"`
 	AccessTokensURL *string      `json:"access_tokens_url,omitempty"`
 	RepositoriesURL *string      `json:"repositories_url,omitempty"`
 	HTMLURL         *string      `json:"html_url,omitempty"`
