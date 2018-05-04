@@ -12,6 +12,8 @@ type dataAccess interface {
 	DeleteRepositoryIntegration(appID, repoID, installationID int64)
 	ObliterateIntegration(appID, installationID int64)
 	ReadIntegrationByRepoID(repoID int64) (*integration, error)
+	InsertBulkIssues(issues []*github.Issue)
+	InsertBulkPullRequests(pulls []*github.PullRequest)
 }
 
 type sqlDB interface {
@@ -95,4 +97,12 @@ func (d *database) ReadIntegrationByRepoID(repoID int64) (*integration, error) {
 		return nil, err
 	}
 	return intg, nil
+}
+
+func (d *database) InsertBulkIssues(issues []*github.Issue) {
+	// TODO: Implemented this method.
+}
+
+func (d *database) InsertBulkPullRequests(pulls []*github.PullRequest) {
+	// TODO: Implemented this method.
 }

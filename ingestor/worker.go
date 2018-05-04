@@ -38,7 +38,7 @@ func (w *worker) processHeuprInstallation(event heuprInstallationEvent) {
 					return
 				}
 
-				go w.addRepo(repo, c.(*client).githubClient)
+				go w.addRepo(repo, c.(*client))
 				// TODO: Add logging indicating successfully added a repo.
 
 				w.database.InsertRepositoryIntegration(*e.Installation.AppID, *repo.ID, *e.Installation.ID)
@@ -84,7 +84,7 @@ func (w *worker) processRepoInstallation(event repoInstallationEvent) {
 				if w.repoIntegrationExists(*repo.ID) {
 					return
 				}
-				go w.addRepo(repo, c.(*client).githubClient)
+				go w.addRepo(repo, c.(*client))
 
 				w.database.InsertRepositoryIntegration(*e.Installation.AppID, *repo.ID, *e.Installation.ID)
 			}
@@ -102,8 +102,19 @@ func (w *worker) processRepoInstallation(event repoInstallationEvent) {
 	}(event)
 }
 
-func (w *worker) addRepo(repo *github.Repository, client *github.Client) {
+func (w *worker) addRepo(repo *github.Repository, c *client) {
+	owner, name := *repo.Owner.Login, *repo.Name
+	issues, err := c.getIssues(owner, name, "closed")
+	if err != nil {
+		_ = err // TODO: Log error correctly.
+	}
+	w.database.InsertBulkIssues(issues)
 
+	pulls, err := c.getPulls(owner, name, "closed")
+	if err != nil {
+		_ = err // TODO: Log error correctly.
+	}
+	w.database.InsertBulkPullRequests(pulls)
 }
 
 func (w *worker) repoIntegrationExists(repoID int64) bool {

@@ -29,6 +29,10 @@ func (p *processDB) ReadIntegrationByRepoID(repoID int64) (*integration, error) 
 	return p.intg, p.err
 }
 
+func (p *processDB) InsertBulkIssues(issues []*github.Issue) {}
+
+func (p *processDB) InsertBulkPullRequests(pulls []*github.PullRequest) {}
+
 func int64Ptr(i int64) *int64 {
 	return &i
 }

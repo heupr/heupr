@@ -3,6 +3,7 @@ package ingestor
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -35,6 +36,59 @@ func (c *client) getRepoByID(id int64) (*github.Repository, error) {
 		return nil, err
 	}
 	return repo, nil
+}
+
+func (c *client) getIssues(owner, repo, state string) ([]*github.Issue, error) {
+	issues := []*github.Issue{}
+
+	opt := &github.IssueListByRepoOptions{
+		State: state,
+		ListOptions: github.ListOptions{
+			PerPage: 100,
+		},
+	}
+
+	for {
+		i, resp, err := c.githubClient.Issues.ListByRepo(context.Background(), owner, repo, opt)
+		if err != nil {
+			return nil, fmt.Errorf("addRepo get issues error: %v", err)
+		}
+		issues = append(issues, i...)
+		if resp.NextPage == 0 {
+			break
+		} else {
+			opt.ListOptions.Page = resp.NextPage
+		}
+	}
+
+	return issues, nil
+}
+
+func (c *client) getPulls(owner, repo, state string) ([]*github.PullRequest, error) {
+	pulls := []*github.PullRequest{}
+
+	opt := &github.PullRequestListOptions{
+		State: state,
+		ListOptions: github.ListOptions{
+			PerPage: 100,
+		},
+	}
+
+	for {
+		p, resp, err := c.githubClient.PullRequests.List(context.Background(), owner, repo, opt)
+		if err != nil {
+			return nil, fmt.Errorf("addRepo get pulls error %v", err)
+		}
+		pulls = append(pulls, p...)
+
+		if resp.NextPage == 0 {
+			break
+		} else {
+			opt.ListOptions.Page = resp.NextPage
+		}
+	}
+
+	return pulls, nil
 }
 
 var newClient = func(appID, installationID int64) githubService {
