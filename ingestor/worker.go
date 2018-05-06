@@ -24,11 +24,11 @@ func newWorker(id int, db dataAccess, queue chan chan interface{}) *worker {
 	}
 }
 
-func (w *worker) processHeuprInstallation(event heuprInstallationEvent) {
+func (w *worker) processHeuprInstallation(event heuprInstallationEvent, f newClient) {
 	go func(e heuprInstallationEvent) {
 		switch *e.Action {
 		case "created":
-			c := newClient(*e.Installation.AppID, *e.Installation.ID)
+			c := f(*e.Installation.AppID, *e.Installation.ID)
 			for i := 0; i < len(e.Repositories); i++ {
 				repo, err := c.getRepoByID(*e.Repositories[i].ID)
 				if err != nil {
@@ -55,7 +55,7 @@ func (w *worker) processHeuprInstallation(event heuprInstallationEvent) {
 	}(event)
 }
 
-func (w *worker) processRepoInstallation(event repoInstallationEvent) {
+func (w *worker) processRepoInstallation(event repoInstallationEvent, f newClient) {
 	go func(e repoInstallationEvent) {
 		switch *e.Action {
 		case "added":
@@ -74,7 +74,7 @@ func (w *worker) processRepoInstallation(event repoInstallationEvent) {
 			// 	Repositories: repos,
 			// }
 
-			c := newClient(*e.Installation.AppID, *e.Installation.ID)
+			c := f(*e.Installation.AppID, *e.Installation.ID)
 			for i := 0; i < len(e.RepositoriesAdded); i++ {
 				repo, err := c.getRepoByID(*e.RepositoriesAdded[i].ID)
 				if err != nil {
@@ -89,7 +89,7 @@ func (w *worker) processRepoInstallation(event repoInstallationEvent) {
 				w.database.InsertRepositoryIntegration(*e.Installation.AppID, *repo.ID, *e.Installation.ID)
 			}
 		case "removed":
-			// client := newClient(*e.Installation.AppID, int(*e.Installation.ID))
+			// client := f(*e.Installation.AppID, int(*e.Installation.ID))
 			for i := 0; i < len(e.RepositoriesRemoved); i++ {
 				repo := e.RepositoriesRemoved[i]
 				if !w.repoIntegrationExists(*repo.ID) {

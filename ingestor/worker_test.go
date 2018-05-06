@@ -8,6 +8,15 @@ import (
 	"github.com/google/go-github/github"
 )
 
+type processClient struct {
+	repo *github.Repository
+	err  error
+}
+
+func (pc *processClient) getRepoByID(id int64) (*github.Repository, error) {
+	return pc.repo, pc.err
+}
+
 type processDB struct {
 	intg *integration
 	err  error
@@ -43,25 +52,46 @@ func stringPtr(s string) *string {
 
 func Test_processHeuprInstallation(t *testing.T) {
 	tests := []struct {
-		desc       string
-		evt        heuprInstallationEvent
-		repo       *github.Repository
-		getRepoErr error
-		expt       *integration
+		desc string
+		evnt heuprInstallationEvent
+		repo *github.Repository
+		err  error
+		expt *integration
 	}{
 		{
-			"getRepoByID returning error",
-			heuprInstallationEvent{
+			desc: "installation event with no repositories",
+			evnt: heuprInstallationEvent{
 				Action: stringPtr("added"),
 				Installation: &heuprInstallation{
 					ID:    int64Ptr(1),
+					AppID: int64Ptr(1),
+				},
+				Repositories: []heuprRepository{},
+			},
+			repo: nil,
+			err:  nil,
+			expt: nil,
+		},
+		{
+			desc: "getRepoByID returning error",
+			evnt: heuprInstallationEvent{
+				Action: stringPtr("added"),
+				Installation: &heuprInstallation{
+					ID:    int64Ptr(2),
 					AppID: int64Ptr(2),
 				},
+				Repositories: []heuprRepository{
+					heuprRepository{
+						ID: int64Ptr(3),
+					},
+				},
 			},
-			nil,
-			errors.New("getRepoByID error"),
-			nil,
+			repo: nil,
+			err:  errors.New("test getRepoByID error"),
+			expt: nil,
 		},
+		// [X] heuprInstallationEvent w/ no repositories
+		// [ ] getRepoByID returning error
 		// [ ] repoIntegrationExists returns true
 		// [ ] successful pass to InsertRepositoryIntegration
 		// [ ] successful pass to ObliterateIntegration
@@ -72,7 +102,14 @@ func Test_processHeuprInstallation(t *testing.T) {
 			database: &processDB{},
 		}
 
-		w.processHeuprInstallation(tc.evt)
+		f := func(appID, installationID int64) githubService {
+			return &processClient{
+				repo: tc.repo,
+				err:  tc.err,
+			}
+		}
+
+		w.processHeuprInstallation(tc.evnt, f)
 
 		exp := tc.expt
 		rec := w.database.(*processDB).intg

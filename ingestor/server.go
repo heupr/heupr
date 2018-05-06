@@ -21,6 +21,24 @@ var openDatabase = func() (dataAccess, error) {
 	return &database{sqlDB: db, pool: pool}, nil
 }
 
+type newClient func(int64, int64) githubService
+
+func newGitHubClient(appID, installationID int64) githubService {
+	var key string
+	if PROD {
+		key = "heupr.2017-10-04.private-key.pem"
+	} else {
+		key = "mikeheuprtest.2017-11-16.private-key.pem"
+	}
+	// Wrap the shared transport for use with the Github Installation.
+	itr, err := ghinstallation.NewKeyFromFile(http.DefaultTransport, int(appID), int(installationID), key)
+	if err != nil {
+		_ = err
+	}
+	c := github.NewClient(&http.Client{Transport: itr})
+	return &client{githubClient: c}
+}
+
 // githubService encapsulates the GitHub client library methods.
 type githubService interface {
 	getRepoByID(id int64) (*github.Repository, error)
@@ -89,22 +107,6 @@ func (c *client) getPulls(owner, repo, state string) ([]*github.PullRequest, err
 	}
 
 	return pulls, nil
-}
-
-var newClient = func(appID, installationID int64) githubService {
-	var key string
-	if PROD {
-		key = "heupr.2017-10-04.private-key.pem"
-	} else {
-		key = "mikeheuprtest.2017-11-16.private-key.pem"
-	}
-	// Wrap the shared transport for use with the Github Installation.
-	itr, err := ghinstallation.NewKeyFromFile(http.DefaultTransport, int(appID), int(installationID), key)
-	if err != nil {
-		_ = err
-	}
-	c := github.NewClient(&http.Client{Transport: itr})
-	return &client{githubClient: c}
 }
 
 // Server holds assets necessary for listening to and processing GitHub events.
