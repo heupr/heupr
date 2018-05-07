@@ -1,23 +1,27 @@
 package ingestor
 
-import (
-	"database/sql"
+import "github.com/google/go-github/github"
 
-	"github.com/google/go-github/github"
-)
+type workerService interface {
+	addRepo(repo *github.Repository, c *client)
+	repoIntegrationExists(repoID int64) bool
+}
 
 type worker struct {
+	workerService
 	id       int
 	database dataAccess
+	repoInit repoInitService
 	work     chan interface{}
 	workers  chan chan interface{}
 	quit     chan bool
 }
 
-func newWorker(id int, db dataAccess, queue chan chan interface{}) *worker {
+func newWorker(id int, db dataAccess, r repoInitService, queue chan chan interface{}) *worker {
 	return &worker{
 		id:       id,
 		database: db,
+		repoInit: r,
 		work:     make(chan interface{}),
 		workers:  queue,
 		quit:     make(chan bool),
@@ -34,11 +38,11 @@ func (w *worker) processHeuprInstallation(event heuprInstallationEvent, f newCli
 				if err != nil {
 					_ = err
 				}
-				if w.repoIntegrationExists(*repo.ID) {
+				if w.repoInit.repoIntegrationExists(*repo.ID) {
 					return
 				}
 
-				go w.addRepo(repo, c.(*client))
+				go w.repoInit.addRepo(repo, c)
 				// TODO: Add logging indicating successfully added a repo.
 
 				w.database.InsertRepositoryIntegration(*e.Installation.AppID, *repo.ID, *e.Installation.ID)
@@ -100,32 +104,4 @@ func (w *worker) processRepoInstallation(event repoInstallationEvent, f newClien
 
 		}
 	}(event)
-}
-
-func (w *worker) addRepo(repo *github.Repository, c *client) {
-	owner, name := *repo.Owner.Login, *repo.Name
-	issues, err := c.getIssues(owner, name, "closed")
-	if err != nil {
-		_ = err // TODO: Log error correctly.
-	}
-	w.database.InsertBulkIssues(issues)
-
-	pulls, err := c.getPulls(owner, name, "closed")
-	if err != nil {
-		_ = err // TODO: Log error correctly.
-	}
-	w.database.InsertBulkPullRequests(pulls)
-}
-
-func (w *worker) repoIntegrationExists(repoID int64) bool {
-	_, err := w.database.ReadIntegrationByRepoID(repoID)
-	switch {
-	case err == sql.ErrNoRows:
-		return false
-	case err != nil:
-		_ = err
-		return false
-	default:
-		return true
-	}
 }

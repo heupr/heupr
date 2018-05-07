@@ -9,12 +9,22 @@ import (
 )
 
 type processClient struct {
-	repo *github.Repository
-	err  error
+	repo   *github.Repository
+	issues []*github.Issue
+	pulls  []*github.PullRequest
+	err    error
 }
 
 func (pc *processClient) getRepoByID(id int64) (*github.Repository, error) {
 	return pc.repo, pc.err
+}
+
+func (pc *processClient) getIssues(owner, repo, state string) ([]*github.Issue, error) {
+	return pc.issues, pc.err
+}
+
+func (pc *processClient) getPulls(owner, repo, state string) ([]*github.PullRequest, error) {
+	return pc.pulls, pc.err
 }
 
 type processDB struct {
@@ -41,6 +51,16 @@ func (p *processDB) ReadIntegrationByRepoID(repoID int64) (*integration, error) 
 func (p *processDB) InsertBulkIssues(issues []*github.Issue) {}
 
 func (p *processDB) InsertBulkPullRequests(pulls []*github.PullRequest) {}
+
+type processRepoInit struct {
+	resp bool
+}
+
+func (p *processRepoInit) addRepo(repo *github.Repository, c githubService) {}
+
+func (p *processRepoInit) repoIntegrationExists(repoID int64) bool {
+	return p.resp
+}
 
 func int64Ptr(i int64) *int64 {
 	return &i
@@ -100,6 +120,7 @@ func Test_processHeuprInstallation(t *testing.T) {
 	for i, tc := range tests {
 		w := &worker{
 			database: &processDB{},
+			repoInit: &processRepoInit{},
 		}
 
 		f := func(appID, installationID int64) githubService {

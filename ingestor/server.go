@@ -42,6 +42,8 @@ func newGitHubClient(appID, installationID int64) githubService {
 // githubService encapsulates the GitHub client library methods.
 type githubService interface {
 	getRepoByID(id int64) (*github.Repository, error)
+	getIssues(owner, repo, state string) ([]*github.Issue, error)
+	getPulls(owner, repo, state string) ([]*github.PullRequest, error)
 }
 
 type client struct {
@@ -123,6 +125,10 @@ func (s *Server) Start() {
 	}
 	s.database = db
 
+	r := repoInit{
+		database: db,
+	}
+	_ = r
 }
 
 // Stop provides graceful server shutdown.
