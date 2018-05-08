@@ -9,10 +9,11 @@ import (
 )
 
 type processClient struct {
-	repo   *github.Repository
-	issues []*github.Issue
-	pulls  []*github.PullRequest
-	err    error
+	repo        *github.Repository
+	issues      []*github.Issue
+	pulls       []*github.PullRequest
+	tomlContent string
+	err         error
 }
 
 func (pc *processClient) getRepoByID(id int64) (*github.Repository, error) {
@@ -25,6 +26,10 @@ func (pc *processClient) getIssues(owner, repo, state string) ([]*github.Issue, 
 
 func (pc *processClient) getPulls(owner, repo, state string) ([]*github.PullRequest, error) {
 	return pc.pulls, pc.err
+}
+
+func (pc *processClient) getTOML(owner, repo string) (string, error) {
+	return pc.tomlContent, pc.err
 }
 
 type processDB struct {
@@ -51,6 +56,8 @@ func (p *processDB) ReadIntegrationByRepoID(repoID int64) (*integration, error) 
 func (p *processDB) InsertBulkIssues(issues []*github.Issue) {}
 
 func (p *processDB) InsertBulkPullRequests(pulls []*github.PullRequest) {}
+
+func (p *processDB) InsertTOML(content string) {}
 
 type processRepoInit struct {
 	resp bool

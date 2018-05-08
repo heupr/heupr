@@ -44,6 +44,7 @@ type githubService interface {
 	getRepoByID(id int64) (*github.Repository, error)
 	getIssues(owner, repo, state string) ([]*github.Issue, error)
 	getPulls(owner, repo, state string) ([]*github.PullRequest, error)
+	getTOML(owner, repo string) (string, error)
 }
 
 type client struct {
@@ -53,7 +54,7 @@ type client struct {
 func (c *client) getRepoByID(id int64) (*github.Repository, error) {
 	repo, _, err := c.githubClient.Repositories.GetByID(context.Background(), id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("addRepo get repo by ID error: %v", err)
 	}
 	return repo, nil
 }
@@ -109,6 +110,19 @@ func (c *client) getPulls(owner, repo, state string) ([]*github.PullRequest, err
 	}
 
 	return pulls, nil
+}
+
+func (c *client) getTOML(owner, repo string) (string, error) {
+	opts := &github.RepositoryContentGetOptions{}
+	repoContent, _, _, err := c.githubClient.Repositories.GetContents(context.Background(), owner, repo, ".heupr.toml", opts)
+	if err != nil {
+		return "", fmt.Errorf("addRepo get TOML error: %v", err)
+	}
+	content, err := repoContent.GetContent()
+	if err != nil {
+		return "", fmt.Errorf("addRepo get TOML content error: %v", err)
+	}
+	return content, nil
 }
 
 // Server holds assets necessary for listening to and processing GitHub events.

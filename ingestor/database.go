@@ -14,6 +14,7 @@ type dataAccess interface {
 	ReadIntegrationByRepoID(repoID int64) (*integration, error)
 	InsertBulkIssues(issues []*github.Issue)
 	InsertBulkPullRequests(pulls []*github.PullRequest)
+	InsertTOML(content string)
 }
 
 type sqlDB interface {
@@ -100,9 +101,13 @@ func (d *database) ReadIntegrationByRepoID(repoID int64) (*integration, error) {
 }
 
 func (d *database) InsertBulkIssues(issues []*github.Issue) {
-	// TODO: Implemented this method.
+	// TODO: Implement this method.
 }
 
 func (d *database) InsertBulkPullRequests(pulls []*github.PullRequest) {
-	// TODO: Implemented this method.
+	// TODO: Implement this method.
+}
+
+func (d *database) InsertTOML(content string) {
+	// TODO: Implement this method
 }

@@ -28,6 +28,12 @@ func (r *repoInit) addRepo(repo *github.Repository, c githubService) {
 		_ = err // TODO: Log error correctly.
 	}
 	r.database.InsertBulkPullRequests(pulls)
+
+	file, err := c.getTOML(owner, name)
+	if err != nil {
+		_ = err // TODO: Log error correctly.
+	}
+	r.database.InsertTOML(file)
 }
 
 func (r *repoInit) repoIntegrationExists(repoID int64) bool {

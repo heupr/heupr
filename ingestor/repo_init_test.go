@@ -8,10 +8,11 @@ import (
 )
 
 type repoInitDB struct {
-	intg   *integration
-	issues []*github.Issue
-	pulls  []*github.PullRequest
-	err    error
+	intg        *integration
+	issues      []*github.Issue
+	pulls       []*github.PullRequest
+	tomlContent string
+	err         error
 }
 
 func (r *repoInitDB) InsertRepositoryIntegration(appID, repoID, installationID int64) {}
@@ -32,11 +33,16 @@ func (r *repoInitDB) InsertBulkPullRequests(pulls []*github.PullRequest) {
 	r.pulls = pulls
 }
 
+func (r *repoInitDB) InsertTOML(content string) {
+	r.tomlContent = content
+}
+
 type repoInitClient struct {
-	repo   *github.Repository
-	issues []*github.Issue
-	pulls  []*github.PullRequest
-	err    error
+	repo        *github.Repository
+	issues      []*github.Issue
+	pulls       []*github.PullRequest
+	tomlContent string
+	err         error
 }
 
 func (r *repoInitClient) getRepoByID(id int64) (*github.Repository, error) {
@@ -51,13 +57,18 @@ func (r *repoInitClient) getPulls(owner, repo, state string) ([]*github.PullRequ
 	return r.pulls, r.err
 }
 
+func (r *repoInitClient) getTOML(owner, repo string) (string, error) {
+	return r.tomlContent, r.err
+}
+
 func Test_addRepo(t *testing.T) {
 	tests := []struct {
-		desc   string
-		repo   *github.Repository
-		issues []*github.Issue
-		pulls  []*github.PullRequest
-		err    error
+		desc        string
+		repo        *github.Repository
+		issues      []*github.Issue
+		pulls       []*github.PullRequest
+		tomlContent string
+		err         error
 	}{
 		{
 			desc: "repo with no issues/pulls",
