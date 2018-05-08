@@ -1,13 +1,9 @@
 package ingestor
 
-import (
-	"database/sql"
-
-	"github.com/google/go-github/github"
-)
+import "database/sql"
 
 type repoInitService interface {
-	addRepo(repo *github.Repository, c githubService)
+	addRepo(owner, repo string, c githubService)
 	repoIntegrationExists(repoID int64) bool
 }
 
@@ -15,21 +11,20 @@ type repoInit struct {
 	database dataAccess
 }
 
-func (r *repoInit) addRepo(repo *github.Repository, c githubService) {
-	owner, name := *repo.Owner.Login, *repo.Name
-	issues, err := c.getIssues(owner, name, "closed")
+func (r *repoInit) addRepo(owner, repo string, c githubService) {
+	issues, err := c.getIssues(owner, repo, "closed")
 	if err != nil {
 		_ = err // TODO: Log error correctly.
 	}
 	r.database.InsertBulkIssues(issues)
 
-	pulls, err := c.getPulls(owner, name, "closed")
+	pulls, err := c.getPulls(owner, repo, "closed")
 	if err != nil {
 		_ = err // TODO: Log error correctly.
 	}
 	r.database.InsertBulkPullRequests(pulls)
 
-	file, err := c.getTOML(owner, name)
+	file, err := c.getTOML(owner, repo)
 	if err != nil {
 		_ = err // TODO: Log error correctly.
 	}

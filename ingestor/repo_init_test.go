@@ -64,39 +64,28 @@ func (r *repoInitClient) getTOML(owner, repo string) (string, error) {
 func Test_addRepo(t *testing.T) {
 	tests := []struct {
 		desc        string
-		repo        *github.Repository
+		owner       string
+		repo        string
 		issues      []*github.Issue
 		pulls       []*github.PullRequest
 		tomlContent string
 		err         error
 	}{
 		{
-			desc: "repo with no issues/pulls",
-			repo: &github.Repository{
-				Owner: &github.User{
-					Login: stringPtr("grand_moff_tarkin"),
-				},
-				Name: stringPtr("death-star"),
-			},
+			desc:  "repo with no issues/pulls",
+			owner: "grand-moff-tarink",
+			repo:  "death-star",
 		},
 		{
-			desc: "repo with issues/pulls getters returning errors",
-			repo: &github.Repository{
-				Owner: &github.User{
-					Login: stringPtr("uncle-owen"),
-				},
-				Name: stringPtr("lars-moisture-farm"),
-			},
-			err: errors.New("getter returning error"),
+			desc:  "repo with issues/pulls getters returning errors",
+			owner: "uncle-owen-and-aunt-beru",
+			repo:  "lars-moisture-farm",
+			err:   errors.New("getter returning error"),
 		},
 		{
-			desc: "repo with issues and no pull requests",
-			repo: &github.Repository{
-				Owner: &github.User{
-					Login: stringPtr("chalmun"),
-				},
-				Name: stringPtr("chalmuns-cantina"),
-			},
+			desc:  "repo with issues and no pull requests",
+			owner: "chalmun",
+			repo:  "chalmuns-cantina",
 			issues: []*github.Issue{
 				&github.Issue{},
 			},
@@ -118,7 +107,7 @@ func Test_addRepo(t *testing.T) {
 			err:    tc.err,
 		}
 
-		r.addRepo(tc.repo, c)
+		r.addRepo(tc.owner, tc.repo, c)
 		rec, exp := len(r.database.(*repoInitDB).issues), len(tc.issues)
 		if rec != exp {
 			t.Errorf("test #%v desc: %v, database issues length %v, expected %v", i+1, tc.desc, rec, exp)

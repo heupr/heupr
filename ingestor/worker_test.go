@@ -63,7 +63,7 @@ type processRepoInit struct {
 	resp bool
 }
 
-func (p *processRepoInit) addRepo(repo *github.Repository, c githubService) {}
+func (p *processRepoInit) addRepo(owner, repo string, c githubService) {}
 
 func (p *processRepoInit) repoIntegrationExists(repoID int64) bool {
 	return p.resp
