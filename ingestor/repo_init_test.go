@@ -68,8 +68,7 @@ func Test_addRepo(t *testing.T) {
 	err := errors.New("test error value")
 	tests := []struct {
 		desc      string
-		owner     string
-		repo      string
+		repo      *github.Repository
 		issues    []*github.Issue
 		issuesErr error
 		pulls     []*github.PullRequest
@@ -78,22 +77,34 @@ func Test_addRepo(t *testing.T) {
 		tomlErr   error
 	}{
 		{
-			desc:  "repo with no issues/pulls",
-			owner: "grand-moff-tarink",
-			repo:  "death-star",
+			desc: "repo with no issues/pulls",
+			repo: &github.Repository{
+				Owner: &github.User{
+					Login: stringPtr("grand-moff-tarkin"),
+				},
+				Name: stringPtr("death-star"),
+			},
 		},
 		{
-			desc:      "all getters returning errors",
-			owner:     "uncle-owen-and-aunt-beru",
-			repo:      "lars-moisture-farm",
+			desc: "all getters returning errors",
+			repo: &github.Repository{
+				Owner: &github.User{
+					Login: stringPtr("uncle-owen-and-aunt-beru"),
+				},
+				Name: stringPtr("lars-moisture-farm"),
+			},
 			issuesErr: err,
 			pullsErr:  err,
 			tomlErr:   err,
 		},
 		{
-			desc:  "repo with issues/toml and no pull requests",
-			owner: "chalmun",
-			repo:  "chalmuns-cantina",
+			desc: "repo with issues/toml and no pull requests",
+			repo: &github.Repository{
+				Owner: &github.User{
+					Login: stringPtr("chalmun"),
+				},
+				Name: stringPtr("chalmuns-cantina"),
+			},
 			issues: []*github.Issue{
 				&github.Issue{
 					Title: stringPtr("No droids!"),
@@ -118,7 +129,7 @@ func Test_addRepo(t *testing.T) {
 			tomlErr:   tc.tomlErr,
 		}
 
-		r.addRepo(tc.owner, tc.repo, c)
+		r.addRepo(tc.repo, c)
 		rec, exp := len(r.database.(*repoInitDB).issues), len(tc.issues)
 		if rec != exp {
 			t.Errorf("test #%v desc: %v, database issues length %v, expected %v", i+1, tc.desc, rec, exp)
