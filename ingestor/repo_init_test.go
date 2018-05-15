@@ -64,6 +64,10 @@ func (r *repoInitDB) InsertTOML(content string) {
 	r.toml = content
 }
 
+func stringPtr(s string) *string {
+	return &s
+}
+
 func Test_addRepo(t *testing.T) {
 	err := errors.New("test error value")
 	tests := []struct {

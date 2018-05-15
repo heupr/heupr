@@ -42,7 +42,7 @@ func (w *worker) processHeuprInstallation(event heuprInstallationEvent, f newCli
 					return
 				}
 
-				go w.repoInit.addRepo(*repo.Owner.Login, *repo.Name, c)
+				go w.repoInit.addRepo(repo, c)
 				// TODO: Add logging indicating successfully added a repo.
 
 				w.database.InsertRepositoryIntegration(*e.Installation.AppID, *repo.ID, *e.Installation.ID)

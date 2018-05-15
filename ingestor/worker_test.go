@@ -1,5 +1,6 @@
 package ingestor
 
+/*
 import (
 	"errors"
 	"reflect"
@@ -9,11 +10,8 @@ import (
 )
 
 type processClient struct {
-	repo        *github.Repository
-	issues      []*github.Issue
-	pulls       []*github.PullRequest
-	tomlContent string
-	err         error
+	repo *github.Repository
+	err  error
 }
 
 func (pc *processClient) getRepoByID(id int64) (*github.Repository, error) {
@@ -21,20 +19,19 @@ func (pc *processClient) getRepoByID(id int64) (*github.Repository, error) {
 }
 
 func (pc *processClient) getIssues(owner, repo, state string) ([]*github.Issue, error) {
-	return pc.issues, pc.err
+	return nil, nil
 }
 
 func (pc *processClient) getPulls(owner, repo, state string) ([]*github.PullRequest, error) {
-	return pc.pulls, pc.err
+	return nil, nil
 }
 
 func (pc *processClient) getTOML(owner, repo string) (string, error) {
-	return pc.tomlContent, pc.err
+	return "", nil
 }
 
 type processDB struct {
 	intg *integration
-	err  error
 }
 
 func (p *processDB) InsertRepositoryIntegration(appID, repoID, installationID int64) {
@@ -50,7 +47,7 @@ func (p *processDB) DeleteRepositoryIntegration(appID, repoID, installationID in
 func (p *processDB) ObliterateIntegration(appID, installationID int64) {}
 
 func (p *processDB) ReadIntegrationByRepoID(repoID int64) (*integration, error) {
-	return p.intg, p.err
+	return nil, nil
 }
 
 func (p *processDB) InsertBulkIssues(issues []*github.Issue) {}
@@ -63,7 +60,7 @@ type processRepoInit struct {
 	resp bool
 }
 
-func (p *processRepoInit) addRepo(owner, repo string, c githubService) {}
+func (p *processRepoInit) addRepo(repo *github.Repository, c githubService) {}
 
 func (p *processRepoInit) repoIntegrationExists(repoID int64) bool {
 	return p.resp
@@ -78,6 +75,7 @@ func stringPtr(s string) *string {
 }
 
 func Test_processHeuprInstallation(t *testing.T) {
+	err := errors.New("example test error")
 	tests := []struct {
 		desc string
 		evnt heuprInstallationEvent
@@ -86,37 +84,54 @@ func Test_processHeuprInstallation(t *testing.T) {
 		expt *integration
 	}{
 		{
+			desc: "incorrect event action specified",
+			evnt: heuprInstallationEvent{
+				Action: stringPtr("test-action"),
+			},
+			expt: nil,
+		},
+		{
+			desc: "get repo by id returning error",
+			evnt: heuprInstallationEvent{
+				Action: stringPtr("created"),
+				Installation: &heuprInstallation{
+					ID:    int64Ptr(1),
+					AppID: int64Ptr(1),
+				},
+			},
+			err: err,
+		},
+		{
 			desc: "installation event with no repositories",
 			evnt: heuprInstallationEvent{
-				Action: stringPtr("added"),
+				Action: stringPtr("created"),
 				Installation: &heuprInstallation{
 					ID:    int64Ptr(1),
 					AppID: int64Ptr(1),
 				},
 				Repositories: []heuprRepository{},
 			},
-			repo: nil,
-			err:  nil,
-			expt: nil,
+			err: nil,
 		},
-		{
-			desc: "getRepoByID returning error",
-			evnt: heuprInstallationEvent{
-				Action: stringPtr("added"),
-				Installation: &heuprInstallation{
-					ID:    int64Ptr(2),
-					AppID: int64Ptr(2),
-				},
-				Repositories: []heuprRepository{
-					heuprRepository{
-						ID: int64Ptr(3),
-					},
-				},
-			},
-			repo: nil,
-			err:  errors.New("test getRepoByID error"),
-			expt: nil,
-		},
+
+		// {
+		// 	desc: "getRepoByID returning error",
+		// 	evnt: heuprInstallationEvent{
+		// 		Action: stringPtr("added"),
+		// 		Installation: &heuprInstallation{
+		// 			ID:    int64Ptr(2),
+		// 			AppID: int64Ptr(2),
+		// 		},
+		// 		Repositories: []heuprRepository{
+		// 			heuprRepository{
+		// 				ID: int64Ptr(3),
+		// 			},
+		// 		},
+		// 	},
+		// 	repo: nil,
+		// 	err:  errors.New("test getRepoByID error"),
+		// 	expt: nil,
+		// },
 		// [X] heuprInstallationEvent w/ no repositories
 		// [ ] getRepoByID returning error
 		// [ ] repoIntegrationExists returns true
@@ -147,3 +162,4 @@ func Test_processHeuprInstallation(t *testing.T) {
 
 	}
 }
+*/
