@@ -8,7 +8,7 @@ import (
 	"github.com/google/go-github/github"
 	"github.com/pkg/errors"
 
-	"heupr/backend/process/preprocess"
+	"heupr/backend/preprocess"
 	"heupr/backend/response"
 )
 

@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"testing"
 
+	"heupr/backend/preprocess"
 	"heupr/backend/process"
-	"heupr/backend/process/preprocess"
 )
 
 type startTestDB struct {

@@ -6,7 +6,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"heupr/backend/process/preprocess"
+	"heupr/backend/preprocess"
 )
 
 type dataAccess interface {

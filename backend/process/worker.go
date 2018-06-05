@@ -1,6 +1,6 @@
 package process
 
-import "heupr/backend/process/preprocess"
+import "heupr/backend/preprocess"
 
 type worker struct {
 	id      int

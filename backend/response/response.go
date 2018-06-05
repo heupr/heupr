@@ -1,6 +1,6 @@
 package response
 
-import "heupr/backend/process/preprocess"
+import "heupr/backend/preprocess"
 
 // Model is used for processing incoming events within Containers.
 type Model interface {

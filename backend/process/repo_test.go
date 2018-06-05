@@ -3,7 +3,7 @@ package process
 import (
 	"testing"
 
-	"heupr/backend/process/preprocess"
+	"heupr/backend/preprocess"
 )
 
 func ptrInt64(input int64) *int64 {
