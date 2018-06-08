@@ -1,0 +1,55 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+  position: relative;
+}
+
+li {
+  float: left;
+  display: inline;
+}
+
+ul {
+  width: 100%;
+  display: inline-block;
+  margin-left: 5rem;
+}
+
+ul li a {
+  display: block;
+  padding: 1rem;
+  width: 100%;
+  text-decoration: none;
+}
+
+.background-image {
+  position: absolute;
+  z-index: -1;
+  height: 100%;
+  width: 100%;
+  opacity: 0.4;
+  background-image: url("../img/background.jpg");
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.container {
+  margin: 0 20%;
+}
+
+.info {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.intro {
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+}
