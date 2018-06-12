@@ -4,11 +4,24 @@
   box-sizing: border-box;
 }
 
-html, body {
+h2 {
+  margin-top: 8rem;
+  margin-bottom: 2rem;
+  font-weight: 700;
+}
+
+h3 {
+  margin-top: 10rem;
+  margin-bottom: 4rem;
+  font-weight: 500;
+}
+
+body, html {
   height: 100%;
   width: 100%;
   overflow-x: hidden;
   position: relative;
+  font-family: "Roboto Mono", sans-serif;
 }
 
 li {
@@ -27,6 +40,7 @@ ul li a {
   padding: 1rem;
   width: 100%;
   text-decoration: none;
+  font-weight: 500;
 }
 
 .background-image {
@@ -38,27 +52,39 @@ ul li a {
   background-image: url("../img/background.jpg");
   background-repeat: no-repeat;
   background-size: cover;
+  background-attachment: fixed;
+  background-position: center;
   /* background-color: rgba(50,50,50,1.0); */
   /* background-blend-mode: multiply; */
 }
 
 .button {
-  text-align: center;
   border-radius: 5px;
-  display: block;
-  font-weight: 700;
+  margin: 0.4rem;
 }
 
 .button a {
-  display: block;
   padding: 0.8rem;
-  margin: 0.2rem;
   color: #FFFFFF;
+  display: block;
+  font-weight: 500;
   text-decoration: none;
+}
+
+.button a:hover {
+  border-radius: 5px;
+}
+
+.buttons {
+  text-align: center;
 }
 
 .container {
   margin: 0 20%;
+}
+
+.footer {
+  margin-top: 2rem;
 }
 
 .footer li a {
@@ -67,19 +93,21 @@ ul li a {
 }
 
 .install {
-  background-color: #FF9D00;
+  background-color: #FF7700;
 }
 
-.install:hover {
-  background-color: #FFB33A;
+.install a:hover {
+  color: #FF7700;
+  background-color: #FFFFFF;
 }
 
 .learn-more {
-  background-color: #68A7FF;
+  background-color: #3884ff;
 }
 
-.learn-more:hover {
-  background-color: #8EBDFF;
+.learn-more a:hover {
+  color: #3884ff;
+  background-color: #FFFFFF;
 }
 
 .nav {
@@ -88,7 +116,7 @@ ul li a {
 
 .nav li a {
   color: #FFFFFF;
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 700;
 }
 
@@ -103,11 +131,9 @@ ul li a {
 
 .intro {
   display: grid;
-  grid-gap: 0.5rem;
   grid-template-columns: 3fr 1fr;
 }
 
 .intro p {
-  grid-row-start: 1;
-  grid-row-end: 3;
+  padding-right: 4rem;
 }
