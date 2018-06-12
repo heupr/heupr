@@ -19,7 +19,7 @@ li {
 ul {
   width: 100%;
   display: inline-block;
-  margin-left: 5rem;
+  padding-left: 5rem;
 }
 
 ul li a {
@@ -34,14 +34,66 @@ ul li a {
   z-index: -1;
   height: 100%;
   width: 100%;
-  opacity: 0.4;
+  opacity: 0.2;
   background-image: url("../img/background.jpg");
   background-repeat: no-repeat;
   background-size: cover;
+  /* background-color: rgba(50,50,50,1.0); */
+  /* background-blend-mode: multiply; */
+}
+
+.button {
+  text-align: center;
+  border-radius: 5px;
+  display: block;
+  font-weight: 700;
+}
+
+.button a {
+  display: block;
+  padding: 0.8rem;
+  margin: 0.2rem;
+  color: #FFFFFF;
+  text-decoration: none;
 }
 
 .container {
   margin: 0 20%;
+}
+
+.footer li a {
+  color: #DC143C;
+  font-weight: 700;
+}
+
+.install {
+  background-color: #FF9D00;
+}
+
+.install:hover {
+  background-color: #FFB33A;
+}
+
+.learn-more {
+  background-color: #68A7FF;
+}
+
+.learn-more:hover {
+  background-color: #8EBDFF;
+}
+
+.nav {
+  background-color: #DC143C;
+}
+
+.nav li a {
+  color: #FFFFFF;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.nav li a:hover {
+  background-color: #FF1947;
 }
 
 .info {
@@ -51,5 +103,11 @@ ul li a {
 
 .intro {
   display: grid;
+  grid-gap: 0.5rem;
   grid-template-columns: 3fr 1fr;
+}
+
+.intro p {
+  grid-row-start: 1;
+  grid-row-end: 3;
 }
