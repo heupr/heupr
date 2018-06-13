@@ -5,14 +5,14 @@
 }
 
 h2 {
-  margin-top: 8rem;
-  margin-bottom: 2rem;
+  padding-top: 12rem;
+  padding-bottom: 2rem;
   font-weight: 700;
 }
 
 h3 {
-  margin-top: 10rem;
-  margin-bottom: 4rem;
+  padding-top: 6rem;
+  padding-bottom: 2rem;
   font-weight: 500;
 }
 
@@ -22,6 +22,10 @@ body, html {
   overflow-x: hidden;
   position: relative;
   font-family: "Roboto Mono", sans-serif;
+}
+
+header {
+  height: 100%;
 }
 
 li {
@@ -54,8 +58,6 @@ ul li a {
   background-size: cover;
   background-attachment: fixed;
   background-position: center;
-  /* background-color: rgba(50,50,50,1.0); */
-  /* background-blend-mode: multiply; */
 }
 
 .button {
@@ -111,6 +113,7 @@ ul li a {
 }
 
 .nav {
+  position: fixed;
   background-color: #DC143C;
 }
 
@@ -127,6 +130,10 @@ ul li a {
 .info {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
+}
+
+.info p {
+  padding: 0.2rem;
 }
 
 .intro {
