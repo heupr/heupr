@@ -4,6 +4,14 @@
   box-sizing: border-box;
 }
 
+body, html {
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+  position: relative;
+  font-family: "Roboto Mono", sans-serif;
+}
+
 h2 {
   padding-top: 12rem;
   padding-bottom: 2rem;
@@ -13,24 +21,31 @@ h2 {
 h3 {
   padding-top: 6rem;
   padding-bottom: 2rem;
+  padding-right: 2rem;
+  padding-left: 0.5rem;
   font-weight: 500;
-}
-
-body, html {
-  height: 100%;
-  width: 100%;
-  overflow-x: hidden;
-  position: relative;
-  font-family: "Roboto Mono", sans-serif;
 }
 
 header {
   height: 100%;
 }
 
+img {
+  border-radius: 12px;
+  object-fit: cover;
+  width: 100%;
+  max-width: 180px;
+  height: 100%;
+  max-height: 200px;
+}
+
 li {
   float: left;
   display: inline;
+}
+
+p a {
+  color: #DC143C;
 }
 
 ul {
@@ -86,12 +101,23 @@ ul li a {
 }
 
 .footer {
-  margin-top: 2rem;
+  margin-top: 4rem;
 }
 
 .footer li a {
   color: #DC143C;
   font-weight: 700;
+}
+
+.info {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+.info p {
+  padding: 0.2rem;
 }
 
 .install {
@@ -101,6 +127,15 @@ ul li a {
 .install a:hover {
   color: #FF7700;
   background-color: #FFFFFF;
+}
+
+.intro {
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+}
+
+.intro p {
+  padding-right: 4rem;
 }
 
 .learn-more {
@@ -127,20 +162,8 @@ ul li a {
   background-color: #FF1947;
 }
 
-.info {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-}
-
-.info p {
-  padding: 0.2rem;
-}
-
-.intro {
-  display: grid;
-  grid-template-columns: 3fr 1fr;
-}
-
-.intro p {
-  padding-right: 4rem;
+.team-member {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

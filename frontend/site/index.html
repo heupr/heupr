@@ -2,22 +2,20 @@
 <html>
   <head>
     <link rel="stylesheet" type="text/css" href="static/css/heupr.css">
-    <!-- <link href="https://fonts.googleapis.com/css?family=Catamaran:400,600|Open+Sans|Source+Sans+Pro:400,600" rel="stylesheet"> -->
     <link href="https://fonts.googleapis.com/css?family=Roboto+Mono:400,500,700" rel="stylesheet">
   </head>
   <body>
     <div class="background-image"></div>
     <ul class="nav">
-      <li><a href="#">Heupr</a></li>
-      <li><a href="#">Features</a></li>
-      <li><a href="#">Setup</a></li>
+      <li><a href="#intro">Heupr</a></li>
+      <li><a href="#about">About</a></li>
       <li><a href="#">Docs</a></li>
     </ul>
-    <header>
+    <header id="intro">
       <div class="container">
         <h2>Manage technical debt with machine learning</h2>
         <div class="intro">
-          <p>Heupr offers a variety of features including bug assignment, task labeling, and issue duplicate identification to help manage your GitHub projects.<br><br>Join the mailing list here to stay up-to-date on product features and releases.</p>
+          <p>Heupr is an open source service that offers a variety of features including bug assignment, task labeling, and issue duplicate identification to help manage your GitHub projects.<br><br>Join the mailing list here to stay up-to-date on product features and releases or contribute to the codebase on <a href="https://github.com/heupr">GitHub</a>!</p>
           <div class="buttons">
             <div class="button install">
               <a href="#">INSTALL</a>
@@ -29,26 +27,34 @@
         </div>
       </div>
     </header>
-    <section>
+    <section id="about">
       <div class="container">
         <h3>Features</h3>
         <div class="info">
           <p class="feature"><b>Assignment</b><br>Too many issues piling up? Heupr automatically assigns contributors to review new issues and stay ahead of backlog.</p>
           <p class="feature"><b>Labeling</b><br>Can't figure out what's what? Heupr parses and categorizes new issues by placing labels that you specify on them.</p>
-          <p class="feature"><b>Duplicates</b><br>Feel like you're seeing double? Heupr identifies when an issue is raised that duplicates one previously opened.</p>
+          <p class="feature"><b>Duplicates</b><br>Feel like you're seeing double? Heupr identifies when an issue is raised that duplicates one previously opened. <b>COMING SOON!</b></p>
         </div>
         <h3>Setup</h3>
         <div class="info">
-          <p class="step">Install the app on your GitHub repositories.</p>
+          <p class="step">Follow these instructions to launch your instance</p>
           <p class="step">Add a .heupr.toml file to each repository.</p>
           <p class="step">Sit back and let Heupr do all the work.</p>
         </div>
+        <h3>Team</h3>
+        <div class="info">
+          <p class="team-member"><img src="static/img/taylor.jpg"></p>
+          <p><a href="https://twitter.com/michaeljtaylor0">Mike</a> and <a href="https://forstmeier.github.io/">John</a> are the co-creators and core maintainers of the project. We love talking to people about Heupr so feel free to reach out and say hello!</p>
+          <p class="team-member"><img src="static/img/forstmeier.jpg"></p>
+        </div>
       </div>
     </section>
-    <ul class="footer">
-      <li><a href="#">Terms</a></li>
-      <li><a href="#">Privacy</a></li>
-      <li><a href="#">Twitter</a></li>
-    </ul>
+    <footer>
+      <ul class="footer">
+        <li><a href="#">Terms</a></li>
+        <li><a href="#">Privacy</a></li>
+        <li><a href="#">Twitter</a></li>
+      </ul>
+  </footer>
   </body>
 </html>
