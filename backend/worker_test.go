@@ -1,29 +1,27 @@
-package process
+package backend
 
 import (
 	"reflect"
 	"testing"
-
-	"heupr/backend/preprocess"
 )
 
 func Test_start(t *testing.T) {
 	w := &worker{
-		work:    make(chan *preprocess.Work),
-		workers: make(chan chan *preprocess.Work),
-		repos: &Repos{
-			Internal: make(map[int64]*Repo),
+		work:    make(chan *work),
+		workers: make(chan chan *work),
+		repos: &repos{
+			Internal: make(map[int64]*repo),
 		},
 		quit: make(chan bool),
 	}
 
 	tests := []struct {
 		desc string
-		wk   *preprocess.Work
-		expt *Repos
+		wk   *work
+		expt *repos
 		pass bool
 	}{
-		{"empty work and worker arguments", &preprocess.Work{}, &Repos{Internal: make(map[int64]*Repo)}, false},
+		{"empty work and worker arguments", &work{}, &repos{Internal: make(map[int64]*repo)}, false},
 	}
 
 	for i := range tests {
@@ -43,30 +41,30 @@ func Test_start(t *testing.T) {
 func Test_collector(t *testing.T) {
 	tests := []struct {
 		desc  string
-		work  map[int64]*preprocess.Work
+		work  map[int64]*work
 		count int
 	}{
 		{"empty work map", nil, 0},
 		{
 			"one work object",
-			map[int64]*preprocess.Work{
-				int64(94): &preprocess.Work{},
+			map[int64]*work{
+				int64(94): &work{},
 			},
 			1,
 		},
 		{
 			"two work objects",
-			map[int64]*preprocess.Work{
-				int64(5555): &preprocess.Work{},
-				int64(4907): &preprocess.Work{},
+			map[int64]*work{
+				int64(5555): &work{},
+				int64(4907): &work{},
 			},
 			2,
 		},
 	}
 
 	for i := range tests {
-		queue := make(chan *preprocess.Work, 100)
-		Collector(tests[i].work, queue)
+		queue := make(chan *work, 100)
+		collector(tests[i].work, queue)
 		exp, rec := tests[i].count, len(queue)
 		if exp != rec {
 			t.Errorf("test #%v desc: %v, channel length expected %v, received %v", i+1, tests[i].desc, exp, rec)

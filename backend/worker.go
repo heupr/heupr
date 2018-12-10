@@ -1,12 +1,10 @@
-package process
-
-import "heupr/backend/preprocess"
+package backend
 
 type worker struct {
 	id      int
-	work    chan *preprocess.Work
-	workers chan chan *preprocess.Work
-	repos   *Repos
+	work    chan *work
+	workers chan chan *work
+	repos   *repos
 	quit    chan bool
 }
 
@@ -16,19 +14,19 @@ func (w *worker) start() {
 			w.workers <- w.work
 			select {
 			case wk := <-w.work:
-				if wk.Integration != nil && wk.Settings != nil {
-					r, err := NewRepo(wk.Settings, wk.Integration)
+				if wk.integration != nil && wk.settings != nil {
+					r, err := newRepo(wk.settings, wk.integration)
 					_ = err // TODO: Log this result.
 					w.repos.Lock()
 					w.repos.Internal[wk.RepoID] = r
 					w.repos.Unlock()
-				} else if wk.Integration == nil && wk.Settings != nil {
+				} else if wk.integration == nil && wk.settings != nil {
 					w.repos.RLock()
 					r, ok := w.repos.Internal[wk.RepoID]
 					w.repos.RUnlock()
 					_ = ok // TODO: Log this result.
 					// TODO: This might need a lock as well?
-					err := r.parseResponses(wk.Settings, wk.RepoID)
+					err := r.parseResponses(wk.settings, wk.RepoID)
 					_ = err // TODO: Log this result.
 				}
 
@@ -42,12 +40,12 @@ func (w *worker) start() {
 	}()
 }
 
-// Dispatcher initializes and starts workers to receive incoming work.
-func Dispatcher(r *Repos, workQueue chan *preprocess.Work, workerQueue chan chan *preprocess.Work) {
+// dispatcher initializes and starts workers to receive incoming work.
+var dispatcher = func(r *repos, workQueue chan *work, workerQueue chan chan *work) {
 	for i := 0; i < cap(workerQueue); i++ {
 		w := &worker{
 			id:      i + 1,
-			work:    make(chan *preprocess.Work),
+			work:    make(chan *work),
 			workers: workerQueue,
 			repos:   r,
 			quit:    make(chan bool),
@@ -66,8 +64,8 @@ func Dispatcher(r *Repos, workQueue chan *preprocess.Work, workerQueue chan chan
 	}()
 }
 
-// Collector distributes new work objects to active workers.
-func Collector(wk map[int64]*preprocess.Work, workQueue chan *preprocess.Work) {
+// collector distributes new work objects to active workers.
+var collector = func(wk map[int64]*work, workQueue chan *work) {
 	if len(wk) != 0 {
 		for _, w := range wk {
 			workQueue <- w

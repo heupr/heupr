@@ -1,5 +1,5 @@
 // +build prod
 
-package process
+package backend
 
 const PROD = true

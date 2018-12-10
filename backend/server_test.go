@@ -3,26 +3,23 @@ package backend
 import (
 	"reflect"
 	"testing"
-
-	"heupr/backend/preprocess"
-	"heupr/backend/process"
 )
 
 type startTestDB struct {
-	intg map[int64]*preprocess.Integration
-	sets map[int64]*preprocess.Settings
-	evts map[int64][]*preprocess.Container
+	intg map[int64]*integration
+	sets map[int64]*settings
+	evts map[int64][]*container
 }
 
-func (s *startTestDB) readIntegrations(query string) (map[int64]*preprocess.Integration, error) {
+func (s *startTestDB) readIntegrations(query string) (map[int64]*integration, error) {
 	return s.intg, nil
 }
 
-func (s *startTestDB) readSettings(query string) (map[int64]*preprocess.Settings, error) {
+func (s *startTestDB) readSettings(query string) (map[int64]*settings, error) {
 	return s.sets, nil
 }
 
-func (s *startTestDB) readEvents(query string) (map[int64][]*preprocess.Container, error) {
+func (s *startTestDB) readEvents(query string) (map[int64][]*container, error) {
 	return s.evts, nil
 }
 
@@ -33,24 +30,24 @@ func TestStart(t *testing.T) {
 
 	tests := []struct {
 		desc string
-		intg map[int64]*preprocess.Integration
-		sets map[int64]*preprocess.Settings
-		repo *process.Repo
+		intg map[int64]*integration
+		sets map[int64]*settings
+		repo *repo
 		err  error
 		expt int
 	}{
 		{"all database tables empty", nil, nil, nil, nil, 0},
 		{
 			"single repo added",
-			map[int64]*preprocess.Integration{
-				int64(66): &preprocess.Integration{
+			map[int64]*integration{
+				int64(66): &integration{
 					RepoID: int64(66),
 				},
 			},
-			map[int64]*preprocess.Settings{
-				int64(66): &preprocess.Settings{},
+			map[int64]*settings{
+				int64(66): &settings{},
 			},
-			&process.Repo{},
+			&repo{},
 			nil,
 			1,
 		},
@@ -64,7 +61,7 @@ func TestStart(t *testing.T) {
 			}
 			return db, nil
 		}
-		newRepo = func(set *preprocess.Settings, intg *preprocess.Integration) (*process.Repo, error) {
+		newRepo = func(set *settings, intg *integration) (*repo, error) {
 			return tests[i].repo, tests[i].err
 		}
 
@@ -79,34 +76,35 @@ func TestStart(t *testing.T) {
 */
 
 func Test_tick(t *testing.T) {
-	dispatcher = func(r *process.Repos, workQueue chan *preprocess.Work, workerQueue chan chan *preprocess.Work) {}
+	dispatcher = func(r *repos, workQueue chan *work, workerQueue chan chan *work) {}
 
-	result := make(map[int64]*preprocess.Work)
-	collector = func(wk map[int64]*preprocess.Work, workQueue chan *preprocess.Work) {
+	result := make(map[int64]*work)
+	holder := collector
+	collector = func(wk map[int64]*work, workQueue chan *work) {
 		result = wk
 	}
 
 	tests := []struct {
 		desc string
-		intg map[int64]*preprocess.Integration
-		sets map[int64]*preprocess.Settings
-		evts map[int64][]*preprocess.Container
-		expt map[int64]*preprocess.Work
+		intg map[int64]*integration
+		sets map[int64]*settings
+		evts map[int64][]*container
+		expt map[int64]*work
 	}{
-		{"no values returned from database", nil, nil, nil, make(map[int64]*preprocess.Work)},
+		{"no values returned from database", nil, nil, nil, make(map[int64]*work)},
 		{
 			"single integration value in database",
-			map[int64]*preprocess.Integration{
-				int64(50): &preprocess.Integration{
+			map[int64]*integration{
+				int64(50): &integration{
 					RepoID: int64(50),
 				},
 			},
 			nil,
 			nil,
-			map[int64]*preprocess.Work{
-				int64(50): &preprocess.Work{
+			map[int64]*work{
+				int64(50): &work{
 					RepoID: int64(50),
-					Integration: &preprocess.Integration{
+					integration: &integration{
 						RepoID: int64(50),
 					},
 				},
@@ -121,9 +119,9 @@ func Test_tick(t *testing.T) {
 				sets: tests[i].sets,
 				evts: tests[i].evts,
 			},
-			work:    make(chan *preprocess.Work),
-			workers: make(chan chan *preprocess.Work),
-			repos:   &process.Repos{},
+			work:    make(chan *work),
+			workers: make(chan chan *work),
+			repos:   &repos{},
 		}
 
 		ender := make(chan bool)
@@ -135,4 +133,6 @@ func Test_tick(t *testing.T) {
 			t.Errorf("test #%v desc: %v, expected map %v, received %v", i+1, tests[i].desc, exp, rec)
 		}
 	}
+
+	collector = holder
 }

@@ -1,4 +1,4 @@
-package process
+package backend
 
 import (
 	"net/http"
@@ -7,45 +7,41 @@ import (
 	"github.com/bradleyfalzon/ghinstallation"
 	"github.com/google/go-github/github"
 	"github.com/pkg/errors"
-
-	"heupr/backend/preprocess"
-	"heupr/backend/response"
 )
 
-// Repo represents an active GitHub repository.
-type Repo struct {
+// repo represents an active GitHub repository.
+type repo struct {
 	sync.Mutex
 	ID        int64
-	settings  *preprocess.Settings
+	settings  *settings
 	client    *github.Client
-	responses map[string]map[string]*response.Action
+	responses map[string]map[string]model
 }
 
-// Repos provides a concurrency-safety wrap around the Repo map.
-type Repos struct {
+// repos provides a concurrency-safety wrap around the repo map.
+type repos struct {
 	sync.RWMutex
-	Internal map[int64]*Repo
+	Internal map[int64]*repo
 }
 
-func (r *Repo) parseResponses(s *preprocess.Settings, id int64) error {
+func (r *repo) parseResponses(s *settings, id int64) error {
 	if id == 0 {
 		return errors.New("repo id not found")
 	}
 
-	responses := make(map[string]map[string]*response.Action)
+	responses := make(map[string]map[string]model)
 
-	for action, opts := range s.Issues {
-		for name, opt := range opts {
+	for action, opts := range s.Issue {
+		for name := range opts {
 			if resp, ok := r.responses["issues-"+action][name]; ok {
-				resp.Options = opt
 				responses["issues-"+action][name] = resp
 			} else {
 				switch name {
 				case "assignment":
-					// initialize assignment w/ response.Options struct
+					// initialize assignment w/ response.issueOptions struct
 					// r.responses["issues-"+action][name] = Action + options
 				case "label":
-					// initialize label w/ response.Options struct
+					// initialize label w/ response.issueOptions struct
 				default:
 					return errors.Errorf("response %v not recognized", name)
 				}
@@ -77,9 +73,8 @@ var NewClient = func(appID, installationID int) *github.Client {
 	return client
 }
 
-// NewRepo is a helper function to create a new Repo instance.
-var NewRepo = func(set *preprocess.Settings, i *preprocess.Integration) (*Repo, error) {
-	r := new(Repo)
+var newRepo = func(set *settings, i *integration) (*repo, error) {
+	r := new(repo)
 
 	if err := r.parseResponses(set, i.RepoID); err != nil {
 		return nil, errors.Errorf("parse settings error: %v", err)

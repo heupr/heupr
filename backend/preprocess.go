@@ -1,4 +1,4 @@
-package itoi
+package backend
 
 import (
 	"encoding/json"
@@ -8,12 +8,13 @@ import (
 
 	"github.com/google/go-github/github"
 	"github.com/pkg/errors"
-
-	"heupr/backend/process/preprocess"
 )
 
-// P is the exported struct needed to implement preprocess.Preprocessor.
-type P struct{}
+type preprocessor interface {
+	preprocess(input []*container) ([]*container, error)
+}
+
+type iToI struct{}
 
 var (
 	digitRegexp = regexp.MustCompile("[0-9]+")
@@ -48,16 +49,15 @@ func findIssueNumbers(s string, sub []string) []int {
 	return nums
 }
 
-// Preprocess provides links between github.Issue structs and github.Issue and
-// github.PullRequest structs based on references within titles/bodies.
-func (p *P) Preprocess(input []*preprocess.Container) ([]*preprocess.Container, error) {
+// preprocess provides links between issues and issues/pull requests.
+func (itoi *iToI) preprocess(input []*container) ([]*container, error) {
 	if len(input) == 0 {
-		return nil, errors.New("empty input slice of preprocess.Container")
+		return nil, errors.New("empty input slice of preprocess.container")
 	}
 
-	closers := make(map[int][]*preprocess.Container)
+	closers := make(map[int][]*container)
 	for i := range input {
-		input[i].Linked = make(map[string][]*preprocess.Container)
+		input[i].Linked = make(map[string][]*container)
 		switch input[i].Event {
 		case "issues":
 			evt := &github.IssueEvent{}

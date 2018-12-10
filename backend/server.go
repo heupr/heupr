@@ -3,9 +3,6 @@ package backend
 import (
 	"database/sql"
 	"time"
-
-	"heupr/backend/preprocess"
-	"heupr/backend/process"
 )
 
 var (
@@ -18,9 +15,9 @@ var (
 // well as channels for processing incoming work.
 type Server struct {
 	database dataAccess
-	work     chan *preprocess.Work
-	workers  chan chan *preprocess.Work
-	repos    *process.Repos
+	work     chan *work
+	workers  chan chan *work
+	repos    *repos
 }
 
 // openDatabase is designed to be overridden in unit testing.
@@ -32,22 +29,16 @@ var openDatabase = func() (dataAccess, error) {
 	return &database{sqlDB: db}, nil
 }
 
-var (
-	newRepo    = process.NewRepo
-	dispatcher = process.Dispatcher
-	collector  = process.Collector
-)
-
 // Start is exported so that cmd/ has access to launch the backend.
 func (s *Server) Start() {
 	db, _ := openDatabase()
 	s.database = db
 
-	s.work = make(chan *preprocess.Work)
-	s.workers = make(chan chan *preprocess.Work)
+	s.work = make(chan *work)
+	s.workers = make(chan chan *work)
 
-	s.repos = &process.Repos{
-		Internal: make(map[int64]*process.Repo),
+	s.repos = &repos{
+		Internal: make(map[int64]*repo),
 	}
 
 	integrations, _ := s.database.readIntegrations(integrationQuery)
@@ -55,7 +46,7 @@ func (s *Server) Start() {
 
 	for i := range integrations {
 		// TODO: There should likely be a check for settings[i] existence.
-		repo, _ := process.NewRepo(settings[i], integrations[i])
+		repo, _ := newRepo(settings[i], integrations[i])
 		s.repos.Lock()
 		s.repos.Internal[integrations[i].RepoID] = repo
 		s.repos.Unlock()
@@ -82,22 +73,22 @@ func (s *Server) tick(ender chan bool) {
 			settings, _ := s.database.readSettings(newSettingsQuery)
 			events, _ := s.database.readEvents(newEventsQuery)
 
-			w := make(map[int64]*preprocess.Work)
+			w := make(map[int64]*work)
 
 			for k, i := range integrations {
-				w[k] = &preprocess.Work{
+				w[k] = &work{
 					RepoID:      k,
-					Integration: i,
+					integration: i,
 				}
 			}
 			for k, s := range settings {
-				w[k] = &preprocess.Work{
+				w[k] = &work{
 					RepoID:   k,
-					Settings: s,
+					settings: s,
 				}
 			}
 			for k, e := range events {
-				w[k] = &preprocess.Work{
+				w[k] = &work{
 					RepoID: k,
 					Events: e,
 				}
