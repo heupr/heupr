@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/go-github/github"
 	"github.com/gorilla/mux"
+	"github.com/tidwall/gjson"
 )
 
 func stringPtr(input string) *string {
@@ -16,12 +17,14 @@ func stringPtr(input string) *string {
 }
 
 type object struct {
-	ID     *int64  `json:"object_id,id,omitempty"`
-	Type   *string `json:"object_type,omitempty"`
-	Action *string `json:"object_action,omitempty"`
-	Number *int    `json:"object_number,number,omitempty"`
-	Title  *string `json:"object_title,title,omitempty"`
-	Body   *string `json:"object_body,body,omitempty"`
+	ID        *int64  `json:"feature_id,id,omitempty"`
+	Type      *string `json:"feature_type,omitempty"`
+	Action    *string `json:"feature_action,omitempty"`
+	Number    *int    `json:"feature_number,number,omitempty"`
+	Title     *string `json:"feature_title,title,omitempty"`
+	Body      *string `json:"feature_body,body,omitempty"`
+	ActorID   *int64  `json:"feature_actor_name,omitempty"`
+	ActorName *string `json:"feature_actor_id,omitempty"`
 }
 
 func events(secret, target string) http.HandlerFunc {
@@ -39,6 +42,7 @@ func events(secret, target string) http.HandlerFunc {
 		}
 
 		output := object{}
+		issueStr := ""
 
 		switch evt := event.(type) {
 		case *github.IssuesEvent:
@@ -46,7 +50,9 @@ func events(secret, target string) http.HandlerFunc {
 
 			issue := evt.Issue
 			buf := new(bytes.Buffer)
+
 			json.NewEncoder(buf).Encode(issue)
+			issueStr = string(buf.Bytes())
 			if err := json.Unmarshal(buf.Bytes(), &output); err != nil {
 				http.Error(w, fmt.Sprintf("error unmarshalling event object: %s", err.Error()), http.StatusInternalServerError)
 				return
@@ -55,6 +61,14 @@ func events(secret, target string) http.HandlerFunc {
 		case *github.PullRequestEvent:
 		default:
 			http.Error(w, "event type not supported", http.StatusInternalServerError)
+			return
+		}
+
+		actorID := gjson.Get(issueStr, "assignee.id")
+		actorName := gjson.Get(issueStr, "assignee.login")
+
+		if !actorID.Exists() || !actorName.Exists() {
+			http.Error(w, "assignee id/name not found", http.StatusInternalServerError)
 			return
 		}
 

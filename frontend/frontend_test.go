@@ -26,6 +26,10 @@ func TestNewServer(t *testing.T) {
 	}
 }
 
+func int64Ptr(input int64) *int64 {
+	return &input
+}
+
 func stringEvent(event interface{}) string {
 	output := []byte{}
 	err := errors.New("")
@@ -109,15 +113,47 @@ func Test_events(t *testing.T) {
 			"event type not supported",
 		},
 		{
-			"passing payload",
+			"no user values provided",
 			stringEvent(&github.IssuesEvent{
-				Issue: nil,
+				Issue: &github.Issue{
+					Assignee: &github.User{},
+				},
 			}),
 			"test-secret",
 			map[string]string{
-				"Content-Type":    "application/json",
-				"X-Hub-Signature": encode("test-secret", []byte(stringEvent(&github.IssuesEvent{}))),
-				"X-GitHub-Event":  "issues",
+				"Content-Type": "application/json",
+				"X-Hub-Signature": encode("test-secret", []byte(stringEvent(&github.IssuesEvent{
+					Issue: &github.Issue{
+						Assignee: &github.User{},
+					},
+				}))),
+				"X-GitHub-Event": "issues",
+			},
+			500,
+			"assignee id/name not found",
+		},
+		{
+			"passing payload",
+			stringEvent(&github.IssuesEvent{
+				Issue: &github.Issue{
+					Assignee: &github.User{
+						ID:    int64Ptr(94),
+						Login: stringPtr("piece-of-junk"),
+					},
+				},
+			}),
+			"test-secret",
+			map[string]string{
+				"Content-Type": "application/json",
+				"X-Hub-Signature": encode("test-secret", []byte(stringEvent(&github.IssuesEvent{
+					Issue: &github.Issue{
+						Assignee: &github.User{
+							ID:    int64Ptr(94),
+							Login: stringPtr("piece-of-junk"),
+						},
+					},
+				}))),
+				"X-GitHub-Event": "issues",
 			},
 			200,
 			"",

@@ -46,26 +46,26 @@ func Test_insertMultiple(t *testing.T) {
 		ftrs  []*feature
 	}{
 		{
-			"non-object byte array",
+			"non-feature byte array",
 			[]byte("a"),
 			errors.New("error unmarshalling input: invalid character 'a' looking for beginning of value"),
 			nil,
 		},
 		{
-			"incorrect input object type",
+			"incorrect input feature type",
 			[]byte("{}"),
-			errors.New("error unmarshalling input: json: cannot unmarshal object into Go value of type []*api.object"),
+			errors.New("error unmarshalling input: json: cannot unmarshal object into Go value of type []*api.feature"),
 			nil,
 		},
 		{
-			"object missing number",
+			"feature missing number",
 			[]byte("[{}]"),
-			errors.New("no input object number"),
+			errors.New("no input feature number"),
 			nil,
 		},
 		{
-			"passing object array input",
-			[]byte(`[{"object_number": 123, "object_body": "Here is a body with a #321 reference"}]`),
+			"passing feature array input",
+			[]byte(`[{"feature_number": 123, "feature_body": "Here is a body with a #321 reference"}]`),
 			nil,
 			[]*feature{
 				&feature{
@@ -93,7 +93,7 @@ func Test_insertMultiple(t *testing.T) {
 		if ftrs != nil {
 			for i, ftr := range ftrs {
 				if !(*ftr.Number == *test.ftrs[i].Number) {
-					t.Errorf("description: %s, object numbers do not match, received: %d, expected: %d", test.desc, *ftr.Number, *test.ftrs[i].Number)
+					t.Errorf("description: %s, feature numbers do not match, received: %d, expected: %d", test.desc, *ftr.Number, *test.ftrs[i].Number)
 				}
 
 				if !(*ftr.References[0] == *test.ftrs[i].References[0]) {
@@ -112,20 +112,20 @@ func Test_insertSingle(t *testing.T) {
 		ftr   *feature
 	}{
 		{
-			"non-object byte array",
+			"non-feature byte array",
 			[]byte("a"),
 			errors.New("error unmarshalling input: invalid character 'a' looking for beginning of value"),
 			nil,
 		},
 		{
-			"object missing number",
+			"feature missing number",
 			[]byte("{}"),
-			errors.New("no input object number"),
+			errors.New("no input feature number"),
 			nil,
 		},
 		{
-			"passing object input",
-			[]byte(`{"object_number": 123, "object_body": "Here is a body with a #321 reference"}`),
+			"passing feature input",
+			[]byte(`{"feature_number": 123, "feature_body": "Here is a body with a #321 reference"}`),
 			nil,
 			&feature{
 				Number: intPtr(123),
@@ -152,7 +152,7 @@ func Test_insertSingle(t *testing.T) {
 
 		if ftr != nil {
 			if !(*ftr.Number == *test.ftr.Number) {
-				t.Errorf("description: %s, object numbers do not match, received: %d, expected: %d", test.desc, *ftr.Number, *test.ftr.Number)
+				t.Errorf("description: %s, feature numbers do not match, received: %d, expected: %d", test.desc, *ftr.Number, *test.ftr.Number)
 			}
 
 			if !(*ftr.References[0] == *test.ftr.References[0]) {

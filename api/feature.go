@@ -29,22 +29,20 @@ func newProcessor(name string) (processor, error) {
 }
 
 type feature struct {
-	Number     *int
-	References []*int
-	Referenced []*int // NOTE: This is not currently used
-}
-
-type object struct {
-	ID     *int64  `json:"object_id,omitempty"`
-	Type   *string `json:"object_type,omitempty"`
-	Action *string `json:"object_action,omitempty"`
-	Number *int    `json:"object_number,omitempty"`
-	Title  *string `json:"object_title,omitempty"`
-	Body   *string `json:"object_body,omitempty"`
+	ID         *int64  `json:"feature_id,omitempty"`
+	Type       *string `json:"feature_type,omitempty"`
+	Action     *string `json:"feature_action,omitempty"`
+	Number     *int    `json:"feature_number,omitempty"`
+	Title      *string `json:"feature_title,omitempty"`
+	Body       *string `json:"feature_body,omitempty"`
+	ActorID    *int64  `json:"feature_actor_id,omitempty"`
+	ActorName  *string `json:"feature_actor_name,omitempty"`
+	References []*int  `json:"feature_references,omitempty"`
+	Referenced []*int  `json:"feature_referenced,omitempty"` // NOTE: This is not currently used
 }
 
 func (p *process) insertMultiple(input []byte) ([]*feature, error) {
-	objs := []*object{}
+	objs := []*feature{}
 
 	if err := json.Unmarshal(input, &objs); err != nil {
 		return nil, fmt.Errorf("error unmarshalling input: %s", err.Error())
@@ -58,7 +56,7 @@ func (p *process) insertMultiple(input []byte) ([]*feature, error) {
 		ftr := feature{}
 
 		if obj.Number == nil {
-			return nil, fmt.Errorf("no input object number")
+			return nil, fmt.Errorf("no input feature number")
 		}
 
 		ftr.Number = obj.Number
@@ -81,7 +79,7 @@ func (p *process) insertMultiple(input []byte) ([]*feature, error) {
 }
 
 func (p *process) insertSingle(input []byte) (*feature, error) {
-	obj := object{}
+	obj := feature{}
 
 	if err := json.Unmarshal(input, &obj); err != nil {
 		return nil, fmt.Errorf("error unmarshalling input: %s", err.Error())
@@ -90,7 +88,7 @@ func (p *process) insertSingle(input []byte) (*feature, error) {
 	ftr := feature{}
 
 	if obj.Number == nil {
-		return nil, fmt.Errorf("no input object number")
+		return nil, fmt.Errorf("no input feature number")
 	}
 
 	ftr.Number = obj.Number
