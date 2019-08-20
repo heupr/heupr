@@ -30,4 +30,4 @@ We're excited to have you working with us!
 
 ## Contact
 
-Feel free to reach out to use at heuprHQ@gmail.com if you're unable to find the answers you need in this README, repositories Issues tabs, or the Wiki FAQ page. We're also on [Twitter](https://twitter.com/heuprHQ)!
+Feel free to reach out to us on [Twitter](https://twitter.com/forstmeier)! if you're unable to find the answers you need in this README, repositories Issues tabs, or the Wiki FAQ page!
