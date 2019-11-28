@@ -1,201 +1,43 @@
 package frontend
 
 import (
-	"bytes"
-	"crypto/hmac"
-	"crypto/sha1"
-	"encoding/hex"
-	"encoding/json"
-	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"strings"
+	"os"
 	"testing"
 
-	"github.com/google/go-github/github"
+	"github.com/google/go-github/v28/github"
 )
 
-func TestNewServer(t *testing.T) {
-	s := New("test-secret", "127.0.0.1", "test-target")
-
-	if s == nil || s.secret == nil || s.server.Addr == "" || s.server.Handler == nil {
-		t.Errorf("frontend server created incorrectly: %+v", s)
-	}
+func TestMain(m *testing.M) {
+	log.SetOutput(ioutil.Discard)
+	os.Exit(m.Run())
 }
 
-func int64Ptr(input int64) *int64 {
-	return &input
-}
-
-func stringEvent(event interface{}) string {
-	output := []byte{}
-	err := errors.New("")
-
-	switch event.(type) {
-	case *github.IssuesEvent:
-		output, err = json.Marshal(event.(*github.IssuesEvent))
-	case *github.IssueCommentEvent:
-		output, err = json.Marshal(event.(*github.IssueCommentEvent))
-	case *github.PullRequestEvent:
-		output, err = json.Marshal(event.(*github.PullRequestEvent))
-	case *github.PullRequestReviewEvent:
-		output, err = json.Marshal(event.(*github.PullRequestReviewEvent))
-	case *github.PullRequestReviewCommentEvent:
-		output, err = json.Marshal(event.(*github.PullRequestReviewCommentEvent))
-	case *github.CheckRunEvent:
-		output, err = json.Marshal(event.(*github.CheckRunEvent))
-	}
-
-	if err != nil {
-		log.Fatalf("error creating event string: %s", err.Error())
-	}
-
-	return string(output)
-}
-
-func encode(secret string, payload []byte) string {
-	mac := hmac.New(sha1.New, []byte(secret))
-	mac.Write(payload)
-	sig := "sha1=" + hex.EncodeToString(mac.Sum(nil))
-	return sig
-}
-
-func Test_events(t *testing.T) {
-	tests := []struct {
-		desc    string
-		body    string
-		secret  string
-		headers map[string]string
-		status  int
-		resp    string
-	}{
-		{
-			"no application/json header type",
-			"test-body",
-			"test-secret",
-			map[string]string{},
-			500,
-			"error validating github payload: Webhook request has unsupported Content-Type \"\"",
-		},
-		{
-			"incorrect secret key provided",
-			"test-body",
-			"test-secret",
-			map[string]string{
-				"Content-Type": "application/json",
-			},
-			500,
-			"error validating github payload: missing signature",
-		},
-		{
-			"incorrect payload value",
-			"test-body",
-			"",
-			map[string]string{
-				"Content-Type": "application/json",
-			},
-			500,
-			"error parsing github webhook: unknown X-Github-Event in message",
-		},
-		{
-			"unsupported event type",
-			stringEvent(&github.CheckRunEvent{}),
-			"test-secret",
-			map[string]string{
-				"Content-Type":    "application/json",
-				"X-Hub-Signature": encode("test-secret", []byte(stringEvent(&github.CheckRunEvent{}))),
-				"X-GitHub-Event":  "check_run",
-			},
-			500,
-			"event type not supported",
-		},
-		{
-			"no user values provided",
-			stringEvent(&github.IssuesEvent{
-				Issue: &github.Issue{
-					Assignee: &github.User{},
-				},
-			}),
-			"test-secret",
-			map[string]string{
-				"Content-Type": "application/json",
-				"X-Hub-Signature": encode("test-secret", []byte(stringEvent(&github.IssuesEvent{
-					Issue: &github.Issue{
-						Assignee: &github.User{},
-					},
-				}))),
-				"X-GitHub-Event": "issues",
-			},
-			500,
-			"assignee id/name not found",
-		},
-		{
-			"passing payload",
-			stringEvent(&github.IssuesEvent{
-				Issue: &github.Issue{
-					Assignee: &github.User{
-						ID:    int64Ptr(94),
-						Login: stringPtr("piece-of-junk"),
-					},
-				},
-			}),
-			"test-secret",
-			map[string]string{
-				"Content-Type": "application/json",
-				"X-Hub-Signature": encode("test-secret", []byte(stringEvent(&github.IssuesEvent{
-					Issue: &github.Issue{
-						Assignee: &github.User{
-							ID:    int64Ptr(94),
-							Login: stringPtr("piece-of-junk"),
-						},
-					},
-				}))),
-				"X-GitHub-Event": "issues",
-			},
-			200,
-			"",
-		},
-	}
-
+func Test_newClient(t *testing.T) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/events", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, `output`)
+
+	mux.HandleFunc("/repos/temple/archives/contents/kamino.txt", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"content":"should be here"}`)
 	})
+
 	server := httptest.NewServer(mux)
-	target, err := url.Parse(server.URL)
-	if err != nil {
-		log.Fatalf("error parsing test url: %s", err.Error())
+
+	c := github.NewClient(nil)
+	url, _ := url.Parse(server.URL + "/")
+	c.BaseURL = url
+	c.UploadURL = url
+
+	output, err := getContent(c, "temple", "archives", "kamino.txt")
+	if output == "" {
+		t.Errorf("description: error getting file contents, received: %s", output)
 	}
 
-	for _, test := range tests {
-		req, err := http.NewRequest("POST", "/events", bytes.NewBufferString(test.body))
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if len(test.headers) > 0 {
-			for header, value := range test.headers {
-				req.Header.Set(header, value)
-			}
-		}
-
-		rec := httptest.NewRecorder()
-
-		handler := http.HandlerFunc(events(test.secret, target.String()))
-
-		handler.ServeHTTP(rec, req)
-
-		if status := rec.Code; status != test.status {
-			t.Errorf("description: %s, handler returned incorrect status code, received: %v, expected: %v", test.desc,
-				status, test.status)
-		}
-
-		if resp := rec.Body.String(); !strings.Contains(resp, test.resp) {
-			t.Errorf("description: %s, handler returned incorrect response, received: %v, expected: %v",
-				test.desc, resp, test.resp)
-		}
+	if err != nil {
+		t.Errorf("description: error getting file contents, error: %s", err.Error())
 	}
 }

@@ -1,0 +1,203 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Rought template for the AWS resources/configurations required for Heupr
+Parameters:
+  HeuprBucket:
+    Description: Name for the previously-created S3 bucket used by the Heupr application
+    Type: String
+Resources:
+  HeuprInstall:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket:
+          Ref: HeuprBucket
+        S3Key: heupr-install.zip
+      Description: Lambda responsible for installing new app instances
+      FunctionName: heupr-install
+      Handler: install
+      MemorySize: 256
+      Role:
+        Fn::GetAtt:
+        - HeuprRole
+        - Arn
+      Runtime: go1.x
+      Timeout: 5
+  HeuprEvent:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket:
+          Ref: HeuprBucket
+        S3Key: heupr-event.zip
+      Description: Lambda responsible for processing new events
+      FunctionName: heupr-event
+      Handler: event
+      MemorySize: 256
+      Role:
+        Fn::GetAtt:
+        - HeuprRole
+        - Arn
+      Runtime: go1.x
+      Timeout: 5
+  HeuprTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+      - AttributeName: webhook_secret
+        AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+      - AttributeName: webhook_secret
+        KeyType: HASH
+      TableName: heupr
+  HeuprAPI:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Body:
+        swagger: '2.0'
+        info:
+          version: '2019-10-03T23:23:20Z'
+          title: heupr
+        host: random.execute-api.us-east-1.amazonaws.com
+        basePath: "/prod"
+        schemes:
+        - https
+        paths:
+          "/install":
+            post:
+              produces:
+              - application/json
+              responses:
+                '200':
+                  description: 200 response
+                  schema:
+                    "$ref": "#/definitions/Empty"
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: '200'
+                uri:
+                  Fn::Join:
+                  - ''
+                  - - 'arn:aws:apigateway:'
+                    - Ref: AWS::Region
+                    - ":lambda:path/2015-03-31/functions/"
+                    - Fn::GetAtt:
+                      - HeuprInstall
+                      - Arn
+                    - "/invocations"
+                httpMethod: POST
+                type: aws_proxy
+          "/event":
+            post:
+              produces:
+              - application/json
+              responses:
+                '200':
+                  description: 200 response
+                  schema:
+                    "$ref": "#/definitions/Empty"
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: '200'
+                uri:
+                  Fn::Join:
+                  - ''
+                  - - 'arn:aws:apigateway:'
+                    - Ref: AWS::Region
+                    - ":lambda:path/2015-03-31/functions/"
+                    - Fn::GetAtt:
+                      - HeuprEvent
+                      - Arn
+                    - "/invocations"
+                httpMethod: POST
+                type: aws_proxy
+        definitions:
+          Empty:
+            type: object
+            title: Empty Schema
+      EndpointConfiguration:
+        Types:
+        - REGIONAL
+      Name: heupr
+  HeuprAPIDeployment:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId:
+        Ref: HeuprAPI
+      StageName: prod
+  HeuprDynamoDBPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: VisualEditor0
+          Effect: Allow
+          Action:
+          - dynamodb:PutItem
+          - dynamodb:GetItem
+          Resource: "*"
+      ManagedPolicyName: heupr-dynamodb-policy
+  HeuprS3Policy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: VisualEditor0
+          Effect: Allow
+          Action:
+          - s3:PutObject
+          - s3:GetObject
+          - s3:DeleteObject
+          Resource: "*"
+      ManagedPolicyName: heupr-s3-policy
+  HeuprRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Description: Permissions for Heupr functions
+      Path: "/"
+      ManagedPolicyArns:
+      - Ref: HeuprDynamoDBPolicy
+      - Ref: HeuprS3Policy
+      - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+      RoleName: heupr-function-role
+  HeuprInstallPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Fn::GetAtt:
+        - HeuprInstall
+        - Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+  HeuprEventPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Fn::GetAtt:
+        - HeuprEvent
+        - Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+Outputs:
+  HeuprURL:
+    Description: API Gateway URL endpoint for the application API
+    Value:
+      Fn::Join:
+      - ''
+      - - https://
+        - Ref: HeuprAPI
+        - ".execute-api."
+        - Ref: AWS::Region
+        - ".amazonaws.com/prod"

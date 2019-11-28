@@ -1,0 +1,9 @@
+---
+backends:
+- name: estimatepr
+  events:
+  - name: pull_request
+    actions:
+    - merged
+  settings: {}
+  location: https://github.com/heupr/heupr/estimatepr.so

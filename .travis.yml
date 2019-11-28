@@ -9,14 +9,21 @@ install:
   - 'go get -t -v ./...'
 script:
   - 'if [ -n "$(gofmt -l .)" ]; then echo "gofmt failed" ; exit 1 ; else echo "gofmt succeeded" ; fi'
-  - 'golint -set_exit_status'
+  - 'golint -set_exit_status ./...'
   - 'go build ./...'
-  - 'go test -v -race github.com/heupr/heupr/api -coverprofile=api.coverprofile'
-  - 'go test -v -race github.com/heupr/heupr/backend -coverprofile=backend.coverprofile'
+  - 'go test -v -race github.com/heupr/heupr/backend/estimatepr -coverprofile=estimatepr.coverprofile'
+  - 'go test -v -race github.com/heupr/heupr/backend/assignissue -coverprofile=assignissue.coverprofile'
   - 'go test -v -race github.com/heupr/heupr/frontend -coverprofile=frontend.coverprofile'
   - 'gover'
   - '$GOPATH/bin/goveralls -coverprofile=gover.coverprofile -service=travis-ci'
+after_success:
+  - pip install --user awscli
+  - export PATH=$PATH:$HOME/.local/bin
+deploy:
+  - provider: script
+    script: bash deploy.sh
+    on:
+      repo: heupr/heupr
+    skip_cleanup: true
 notifications:
   email: false
-  slack:
-    secure: Maq7CkO4dh+bPVtN9Mpdg337EQ1uBy41rXykJDzslArD761ckPmMQBetPaLvMdX8RAkDw0+VGE37xSdK+csGWchbuWZE28tvYuQeVQ6kxmH8hR+mWEUnwwKuvX4VdqWC6zLPOfaUJPU1HqsDVplllY0zw/fFKh2oYVDiZX4zGskgrsYemg5yAX0aVpV5Sj8j11WiKFy+p4CisS7YkZz7h1GH8Vu+XhIWr0IX+lQucmboW+Ebfyk+ofrXFwkLIx1ms1yGcOkm00WSxHqgNqPYWmyppWtKEW9cmEvJwjAitd7ifvrh5DkqYXWbQBKScPg+2SR5bJ3oTlT4j14d36BdXw/dcnygg3P9epA9+tB7+/72n9tkrpQKcskC86reTtEGq2SforCd1n3vcS019Xe5aCqYLCzj5Kl8EUp38Rd2K2Qj4WcDSgLNGaph7q1Dy16sxwICMYJYPdDnjRESf/J4DkWaZ7+7Camq080w7MejNmn6BSq2IRRLkBGtF5JI0lKVxKepdD4tH49Fci6QGOQ+b1JSSprNQWSh3HIV4ywkBhGgSxWm/TNgE0ajlTLPsOgc5zzE2nUAvPzN3J0jQoLPmqCwq76wzMv2MPOnjFEljS5Rc0qySLYDjYWsFbzgqKe93ka12ljuWTnZwKV3Q5no5qSGJQ/TPTLXG5JClYwfFTY=

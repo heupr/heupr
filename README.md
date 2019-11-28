@@ -8,25 +8,33 @@
 
 ## Introduction
 
-Heupr is a machine learning-powered platform to automate project management for software teams working on GitHub. Our goal is to work towards building features and services that allow developers and managers to stay in the "[flow zone](https://firstround.com/review/track-and-facilitate-your-engineers-flow-states-in-this-simple-way/)" and do what they do best: write code!
+**Heupr** automates project management for software teams working on GitHub. Our goal is to work towards building features and services that allow developers and managers to stay in the "[flow zone](https://firstround.com/review/track-and-facilitate-your-engineers-flow-states-in-this-simple-way/)" and do what they do best: write code!
+
+Many projects can benefit from automating management tasks and Heupr is designed to provide a platform to do so quickly. The app can be easily installed on a target GitHub repository and configured by including a modular `.heupr.yml` file in the root directory. Any of the core packages, which provide the various feature functionalities such as issue assignment or pull request estimates, can be included in the configuration setup as well as any third-party packages made available in the community.
 
 "Heupr" is a portmanteau of the words "heuristic" and "projects" and is pronounced "hew-Per."
 
-## Description
-
-This section is currently **WIP** but will be updated with package documentation and installation/usage instructions in the near future.
-
 ## Contributing
 
-Here are a few quick points to help get you started:
+Check out our [contribution](https://github.com/heupr/heupr/blob/master/.github/CONTRIBUTING.md) and [conduct](https://github.com/heupr/heupr/blob/master/.github/CODE_OF_CONDUCT.md) guidelines; jump in and get involved!  
+
+We're excited to have you working with us!  
+
+### Code
+
+Here are a few quick points to help get you started working on the core Heupr repository:
 
 - We follow test-driven development (TDD) on this project so be sure to build test cases alongside the production code; [Travis-CI](https://travis-ci.org/heupr/heupr) and [Coveralls](https://coveralls.io/github/heupr/heupr) will ensure that they are run and that our coverage is adequate but feel free to run them locally too!
 - Our overall design goal is to be as "plug-n-play" as possible so that different modules (frontend and backend) can be introduced by different users; keep everything _modular_ and _minimal_!
 - All of our code should be [clean and readable](https://blog.golang.org/go-fmt-your-code) so be sure to run `gofmt` and `golint` on your code - this is also checked by Travis-CI just to be safe!
 
-Check out our [contribution](https://github.com/heupr/heupr/blob/master/.github/CONTRIBUTING.md) and [conduct](https://github.com/heupr/heupr/blob/master/.github/CODE_OF_CONDUCT.md) guidelines; jump in and get involved!  
+### Packages
 
-We're excited to have you working with us!  
+If you want to contribute a package that can be used by Heupr's backend, here are some guidelines:
+
+- Packages need to conform to the `Backend` interface provided by the `backend` package in the core repo, [here](https://github.com/heupr/heupr/blob/mini-app/backend/backend.go).
+- A publicly accessible `.so` [plugin](https://golang.org/pkg/plugin/) file location needs to be provided via URL so that it can be referenced as a third-party backend package in your or another user's Heupr instance
+- If you feel like you've got a really cool package, feel free to reach out to the project maintainers and request to have it added to the core packages - we'd love to include it!
 
 ## Contact
 
