@@ -1,6 +1,6 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Rought template for the AWS resources/configurations required for Heupr
+Description: Template for the AWS resources/configurations required for Heupr
 Parameters:
   HeuprBucket:
     Description: Name for the previously-created S3 bucket used by the Heupr application
@@ -33,24 +33,47 @@ Resources:
       Description: Lambda responsible for processing new events
       FunctionName: heupr-event
       Handler: event
-      MemorySize: 256
+      Layers:
+      - Ref: HeuprEventLayer
+      MemorySize: 1024
       Role:
         Fn::GetAtt:
         - HeuprRole
         - Arn
       Runtime: go1.x
       Timeout: 5
+  HeuprEventLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      Content:
+        S3Bucket: heupr
+        S3Key: heupr-plugins.zip
   HeuprTable:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
-      - AttributeName: webhook_secret
+      - AttributeName: app_id
+        AttributeType: N
+      - AttributeName: full_name
         AttributeType: S
-      BillingMode: PAY_PER_REQUEST
+      BillingMode: PROVISIONED
+      ProvisionedThroughput:
+        ReadCapacityUnits: 10
+        WriteCapacityUnits: 10
       KeySchema:
-      - AttributeName: webhook_secret
+      - AttributeName: app_id
         KeyType: HASH
       TableName: heupr
+      GlobalSecondaryIndexes:
+      - IndexName: repos
+        KeySchema:
+        - AttributeName: full_name
+          KeyType: HASH
+        Projection:
+          ProjectionType: ALL
+        ProvisionedThroughput:
+          ReadCapacityUnits: 10
+          WriteCapacityUnits: 10
   HeuprAPI:
     Type: AWS::ApiGateway::RestApi
     Properties:
@@ -59,13 +82,12 @@ Resources:
         info:
           version: '2019-10-03T23:23:20Z'
           title: heupr
-        host: random.execute-api.us-east-1.amazonaws.com
         basePath: "/prod"
         schemes:
         - https
         paths:
           "/install":
-            post:
+            get:
               produces:
               - application/json
               responses:
@@ -118,6 +140,7 @@ Resources:
           Empty:
             type: object
             title: Empty Schema
+      Description: API endpoint for the Heupr application
       EndpointConfiguration:
         Types:
         - REGIONAL
@@ -137,8 +160,9 @@ Resources:
         - Sid: VisualEditor0
           Effect: Allow
           Action:
-          - dynamodb:PutItem
-          - dynamodb:GetItem
+          - dynamodb:PutItem # NOTE: Needed (?)
+          - dynamodb:Query
+          - dynamodb:UpdateItem
           Resource: "*"
       ManagedPolicyName: heupr-dynamodb-policy
   HeuprS3Policy:

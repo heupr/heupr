@@ -2,19 +2,15 @@ package frontend
 
 import (
 	"bytes"
-	"crypto/hmac"
-	"crypto/sha1"
-	"encoding/hex"
-	"encoding/json"
 	"errors"
-	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"testing"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/google/go-github/v28/github"
+
+	"github.com/heupr/heupr/backend"
 )
 
 type databaseMock struct {
@@ -27,7 +23,7 @@ func (mock *databaseMock) Put(input installConfig) error {
 	return mock.putErr
 }
 
-func (mock *databaseMock) Get(key string) (installConfig, error) {
+func (mock *databaseMock) Get(key interface{}) (installConfig, error) {
 	return mock.getResp, mock.getErr
 }
 
@@ -83,18 +79,18 @@ func TestInstall(t *testing.T) {
 			postErr:  nil,
 			putErr:   nil,
 			err:      "",
-			status:   200,
+			status:   302,
 			respBody: "success",
 		},
 	}
 
 	for _, test := range tests {
-		post = func(url, contentType string, body io.Reader) (resp *http.Response, err error) {
+		post = func(req *http.Request) (*http.Response, error) {
 			return test.postResp, test.postErr
 		}
 
 		req := events.APIGatewayProxyRequest{
-			Headers: map[string]string{
+			QueryStringParameters: map[string]string{
 				"code": test.code,
 			},
 		}
@@ -143,27 +139,29 @@ func stringPtr(input string) *string {
 	return &input
 }
 
-func stringEvent(event interface{}) string {
-	output := []byte{}
-	err := errors.New("")
+// type testPayload struct{}
+//
+// func (tp testPayload) Type() string {
+// 	return ""
+// }
+//
+// func (tp testPayload) Bytes() []byte {
+// 	return []byte{}
+// }
 
-	switch event.(type) {
-	case *github.InstallationRepositoriesEvent:
-		output, err = json.Marshal(event.(*github.InstallationRepositoriesEvent))
-	}
-
-	if err != nil {
-		log.Fatalf("error creating event string: %s", err.Error())
-	}
-
-	return string(output)
+type testBackend struct {
+	prepareErr error
+	actErr     error
 }
 
-func encode(secret string, payload []byte) string {
-	mac := hmac.New(sha1.New, []byte(secret))
-	mac.Write(payload)
-	sig := "sha1=" + hex.EncodeToString(mac.Sum(nil))
-	return sig
+func (tb *testBackend) Configure(*github.Client) {}
+
+func (tb *testBackend) Prepare(backend.Payload) error {
+	return tb.prepareErr
+}
+
+func (tb *testBackend) Act(backend.Payload) error {
+	return tb.actErr
 }
 
 func TestEvent(t *testing.T) {
@@ -171,9 +169,11 @@ func TestEvent(t *testing.T) {
 		desc           string
 		body           string
 		headers        map[string]string
+		bknds          []backend.Backend
 		getResp        installConfig
 		getErr         error
 		putErr         error
+		validateErr    error
 		clientErr      error
 		getContentResp string
 		getContentErr  error
@@ -182,14 +182,36 @@ func TestEvent(t *testing.T) {
 		respBody       string
 	}{
 		{
-			desc: "error getting config",
-			body: "test-body",
+			desc: "incorrect event type",
+			body: "",
 			headers: map[string]string{
-				"X-Hub-Signature": "test-secret",
+				"X-GitHub-Event":  "test-event",
+				"X-Hub-Signature": "test-signature",
 			},
+			bknds:          []backend.Backend{},
+			getResp:        installConfig{},
+			getErr:         nil,
+			putErr:         nil,
+			validateErr:    nil,
+			clientErr:      nil,
+			getContentResp: "",
+			getContentErr:  nil,
+			err:            "event type test-event not supported",
+			status:         500,
+			respBody:       "event type test-event not supported",
+		},
+		{
+			desc: "error getting config",
+			body: `{"installation": {"app_id": 1038}}`,
+			headers: map[string]string{
+				"X-GitHub-Event":  "installation_repositories",
+				"X-Hub-Signature": "test-signature",
+			},
+			bknds:          []backend.Backend{},
 			getResp:        installConfig{},
 			getErr:         errors.New("mock get error"),
 			putErr:         nil,
+			validateErr:    nil,
 			clientErr:      nil,
 			getContentResp: "",
 			getContentErr:  nil,
@@ -198,274 +220,260 @@ func TestEvent(t *testing.T) {
 			respBody:       "error getting config: mock get error",
 		},
 		{
-			desc: "error validating payload",
-			body: "test-body",
+			desc: "error validating received event",
+			body: `{"installation": {"app_id": 1038}}`,
 			headers: map[string]string{
-				"X-Hub-Signature": "test-secret",
+				"X-GitHub-Event":  "installation_repositories",
+				"X-Hub-Signature": "test-signature",
 			},
-			getResp: installConfig{
-				WebhookSecret: "test-wrong-secret",
-			},
+			bknds:          []backend.Backend{},
+			getResp:        installConfig{},
 			getErr:         nil,
 			putErr:         nil,
+			validateErr:    errors.New("mock validate error"),
 			clientErr:      nil,
 			getContentResp: "",
 			getContentErr:  nil,
-			err:            "error validating payload: error parsing signature \"test-secret\"",
+			err:            "error validating event: mock validate error",
 			status:         500,
-			respBody:       "error validating payload: error parsing signature \"test-secret\"",
+			respBody:       "error validating event: mock validate error",
 		},
 		{
-			desc: "error parsing payload",
-			body: stringEvent(&github.InstallationRepositoriesEvent{
-				Action: stringPtr("removed"),
-				Installation: &github.Installation{
-					ID:    int64Ptr(5),
-					AppID: int64Ptr(1977),
-				},
-			}),
+			desc: "error creating client",
+			body: `{"installation": {"app_id": 1, "id": 2}, "repositories_added": [{"owner": {"login": "test-login"}, "name": "test-name", "full_name": "test-fullname"}]}`,
 			headers: map[string]string{
-				"Content-Type": "application/json",
-				"X-Hub-Signature": encode("test-secret", []byte(stringEvent(&github.InstallationRepositoriesEvent{
-					Action: stringPtr("removed"),
-					Installation: &github.Installation{
-						ID:    int64Ptr(5),
-						AppID: int64Ptr(1977),
-					},
-				}))),
-				"X-Github-Event": "installation_repositories",
+				"X-GitHub-Event":  "installation_repositories",
+				"X-Hub-Signature": "test-signature",
 			},
-			getResp: installConfig{
-				WebhookSecret: "test-secret",
-			},
+			bknds:          []backend.Backend{},
+			getResp:        installConfig{},
 			getErr:         nil,
 			putErr:         nil,
+			validateErr:    nil,
+			clientErr:      errors.New("mock client error"),
+			getContentResp: "",
+			getContentErr:  nil,
+			err:            "error creating client: mock client error",
+			status:         500,
+			respBody:       "error creating client: mock client error",
+		},
+		{
+			desc: "error putting config data",
+			body: `{"installation": {"app_id": 1, "id": 2}, "repositories_added": [{"owner": {"login": "test-login"}, "name": "test-name", "full_name": "test-fullname"}]}`,
+			headers: map[string]string{
+				"X-GitHub-Event":  "installation_repositories",
+				"X-Hub-Signature": "test-signature",
+			},
+			bknds:          []backend.Backend{},
+			getResp:        installConfig{},
+			getErr:         nil,
+			putErr:         errors.New("mock put error"),
+			validateErr:    nil,
 			clientErr:      nil,
 			getContentResp: "",
 			getContentErr:  nil,
-			err:            "repo event not \"added\", received event: \"removed\"",
+			err:            "error putting app config: mock put error",
 			status:         500,
-			respBody:       "repo event not \"added\", received event: \"removed\"",
+			respBody:       "error putting app config: mock put error",
 		},
 		{
-			desc: "error creating install client",
-			body: stringEvent(&github.InstallationRepositoriesEvent{
-				Action: stringPtr("added"),
-				Installation: &github.Installation{
-					ID:    int64Ptr(5),
-					AppID: int64Ptr(1980),
-				},
-			}),
+			desc: "error getting repo config content",
+			body: `{"installation": {"app_id": 1, "id": 2}, "repositories_added": [{"full_name": "test-owner/test-name"}]}`,
 			headers: map[string]string{
-				"Content-Type": "application/json",
-				"X-Hub-Signature": encode("test-secret", []byte(stringEvent(&github.InstallationRepositoriesEvent{
-					Action: stringPtr("added"),
-					Installation: &github.Installation{
-						ID:    int64Ptr(5),
-						AppID: int64Ptr(1980),
-					},
-				}))),
-				"X-Github-Event": "installation_repositories",
+				"X-GitHub-Event":  "installation_repositories",
+				"X-Hub-Signature": "test-signature",
 			},
-			getResp: installConfig{
-				WebhookSecret: "test-secret",
-			},
+			bknds:          []backend.Backend{},
+			getResp:        installConfig{},
 			getErr:         nil,
 			putErr:         nil,
-			clientErr:      errors.New("mock new client error"),
-			getContentResp: "",
-			getContentErr:  nil,
-			err:            "error creating client: mock new client error",
-			status:         500,
-			respBody:       "error creating client: mock new client error",
-		},
-		{
-			desc: "error getting install content",
-			body: stringEvent(&github.InstallationRepositoriesEvent{
-				Action: stringPtr("added"),
-				Installation: &github.Installation{
-					ID:    int64Ptr(5),
-					AppID: int64Ptr(1983),
-				},
-				RepositoriesAdded: []*github.Repository{
-					&github.Repository{
-						Owner: &github.User{
-							Login: stringPtr("star-wars"),
-						},
-						Name: stringPtr("iv"),
-					},
-				},
-			}),
-			headers: map[string]string{
-				"Content-Type": "application/json",
-				"X-Hub-Signature": encode("test-secret", []byte(stringEvent(&github.InstallationRepositoriesEvent{
-					Action: stringPtr("added"),
-					Installation: &github.Installation{
-						ID:    int64Ptr(5),
-						AppID: int64Ptr(1983),
-					},
-					RepositoriesAdded: []*github.Repository{
-						&github.Repository{
-							Owner: &github.User{
-								Login: stringPtr("star-wars"),
-							},
-							Name: stringPtr("iv"),
-						},
-					},
-				}))),
-				"X-Github-Event": "installation_repositories",
-			},
-			getResp: installConfig{
-				WebhookSecret: "test-secret",
-			},
-			getErr:         nil,
-			putErr:         nil,
+			validateErr:    nil,
 			clientErr:      nil,
 			getContentResp: "",
-			getContentErr:  errors.New("mock get content error"),
-			err:            "error getting repo config file: mock get content error",
+			getContentErr:  errors.New("mock content error"),
+			err:            "error getting repo config file: mock content error",
 			status:         500,
-			respBody:       "error getting repo config file: mock get content error",
+			respBody:       "error getting repo config file: mock content error",
 		},
 		{
-			desc: "error parsing config install content",
-			body: stringEvent(&github.InstallationRepositoriesEvent{
-				Action: stringPtr("added"),
-				Installation: &github.Installation{
-					ID:    int64Ptr(5),
-					AppID: int64Ptr(1983),
-				},
-				RepositoriesAdded: []*github.Repository{
-					&github.Repository{
-						Owner: &github.User{
-							Login: stringPtr("star-wars"),
-						},
-						Name: stringPtr("iv"),
-					},
-				},
-			}),
+			desc: "error calling install event backend prepare",
+			body: `{"installation": {"app_id": 1, "id": 2}, "repositories_added": [{"full_name": "test-owner/test-name"}]}`,
 			headers: map[string]string{
-				"Content-Type": "application/json",
-				"X-Hub-Signature": encode("test-secret", []byte(stringEvent(&github.InstallationRepositoriesEvent{
-					Action: stringPtr("added"),
-					Installation: &github.Installation{
-						ID:    int64Ptr(5),
-						AppID: int64Ptr(1983),
-					},
-					RepositoriesAdded: []*github.Repository{
-						&github.Repository{
-							Owner: &github.User{
-								Login: stringPtr("star-wars"),
-							},
-							Name: stringPtr("iv"),
-						},
-					},
-				}))),
-				"X-Github-Event": "installation_repositories",
+				"X-GitHub-Event":  "installation_repositories",
+				"X-Hub-Signature": "test-signature",
 			},
-			getResp: installConfig{
-				WebhookSecret: "test-secret",
+			bknds: []backend.Backend{
+				&testBackend{
+					prepareErr: errors.New("mock prepare error"),
+					actErr:     nil,
+				},
 			},
+			getResp:        installConfig{},
 			getErr:         nil,
 			putErr:         nil,
-			clientErr:      nil,
-			getContentResp: "-------",
-			getContentErr:  nil,
-			err:            "error parsing repo config file: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `-------` into frontend.configObj",
-			status:         500,
-			respBody:       "error parsing repo config file: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `-------` into frontend.configObj",
-		},
-		{
-			desc: "error creating event client",
-			body: stringEvent(&github.InstallationRepositoriesEvent{
-				Action: stringPtr("open"),
-				Installation: &github.Installation{
-					ID:    int64Ptr(5),
-					AppID: int64Ptr(1999),
-				},
-			}),
-			headers: map[string]string{
-				"Content-Type": "application/json",
-				"X-Hub-Signature": encode("test-secret", []byte(stringEvent(&github.InstallationRepositoriesEvent{
-					Action: stringPtr("open"),
-					Installation: &github.Installation{
-						ID:    int64Ptr(5),
-						AppID: int64Ptr(1999),
-					},
-				}))),
-				"X-Github-Event": "issues",
-			},
-			getResp: installConfig{
-				WebhookSecret: "test-secret",
-			},
-			getErr:         nil,
-			putErr:         nil,
-			clientErr:      errors.New("mock new client error"),
-			getContentResp: "",
-			getContentErr:  nil,
-			err:            "error creating client: mock new client error",
-			status:         500,
-			respBody:       "error creating client: mock new client error",
-		},
-		{
-			desc: "error getting event content",
-			body: stringEvent(&github.InstallationRepositoriesEvent{
-				Action: stringPtr("open"),
-				Installation: &github.Installation{
-					ID:    int64Ptr(5),
-					AppID: int64Ptr(1999),
-				},
-			}),
-			headers: map[string]string{
-				"Content-Type": "application/json",
-				"X-Hub-Signature": encode("test-secret", []byte(stringEvent(&github.InstallationRepositoriesEvent{
-					Action: stringPtr("open"),
-					Installation: &github.Installation{
-						ID:    int64Ptr(5),
-						AppID: int64Ptr(1999),
-					},
-				}))),
-				"X-Github-Event": "issues",
-			},
-			getResp: installConfig{
-				WebhookSecret: "test-secret",
-			},
-			getErr:         nil,
-			putErr:         nil,
+			validateErr:    nil,
 			clientErr:      nil,
 			getContentResp: "",
-			getContentErr:  errors.New("mock get content error"),
-			err:            "error getting repo config file: mock get content error",
+			getContentErr:  nil,
+			err:            "error calling backend prepare: mock prepare error",
 			status:         500,
-			respBody:       "error getting repo config file: mock get content error",
+			respBody:       "error calling backend prepare: mock prepare error",
 		},
 		{
-			desc: "error parsing config event content",
-			body: stringEvent(&github.InstallationRepositoriesEvent{
-				Action: stringPtr("open"),
-			}),
+			desc: "successful install event invocation",
+			body: `{"installation": {"app_id": 1, "id": 2}, "repositories_added": [{"full_name": "test-owner/test-name"}]}`,
 			headers: map[string]string{
-				"Content-Type": "application/json",
-				"X-Hub-Signature": encode("test-secret", []byte(stringEvent(&github.InstallationRepositoriesEvent{
-					Action: stringPtr("open"),
-				}))),
-				"X-Github-Event": "issues",
+				"X-GitHub-Event":  "installation_repositories",
+				"X-Hub-Signature": "test-signature",
 			},
-			getResp: installConfig{
-				WebhookSecret: "test-secret",
+			bknds: []backend.Backend{
+				&testBackend{
+					prepareErr: nil,
+					actErr:     nil,
+				},
 			},
+			getResp:        installConfig{},
 			getErr:         nil,
 			putErr:         nil,
+			validateErr:    nil,
 			clientErr:      nil,
-			getContentResp: "-------",
+			getContentResp: "",
 			getContentErr:  nil,
-			err:            "error parsing repo config file: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `-------` into frontend.configObj",
+			err:            "",
+			status:         200,
+			respBody:       "success",
+		},
+		{
+			desc: "error getting config from database",
+			body: `{"repository": {"full_name": "test-owner/test-name"}}`,
+			headers: map[string]string{
+				"X-GitHub-Event":  "issues",
+				"X-Hub-Signature": "test-signature",
+			},
+			bknds:          []backend.Backend{},
+			getResp:        installConfig{},
+			getErr:         errors.New("mock get error"),
+			putErr:         nil,
+			validateErr:    nil,
+			clientErr:      nil,
+			getContentResp: "",
+			getContentErr:  nil,
+			err:            "error getting config: mock get error",
 			status:         500,
-			respBody:       "error parsing repo config file: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `-------` into frontend.configObj",
+			respBody:       "error getting config: mock get error",
+		},
+		{
+			desc: "error validating received event",
+			body: `{"repository": {"full_name": "test-owner/test-name"}}`,
+			headers: map[string]string{
+				"X-GitHub-Event":  "issues",
+				"X-Hub-Signature": "test-signature",
+			},
+			bknds:          []backend.Backend{},
+			getResp:        installConfig{},
+			getErr:         nil,
+			putErr:         nil,
+			validateErr:    errors.New("mock validate error"),
+			clientErr:      nil,
+			getContentResp: "",
+			getContentErr:  nil,
+			err:            "error validating event: mock validate error",
+			status:         500,
+			respBody:       "error validating event: mock validate error",
+		},
+		{
+			desc: "error creating client",
+			body: `{"repository": {"full_name": "test-owner/test-name"}}`,
+			headers: map[string]string{
+				"X-GitHub-Event":  "issues",
+				"X-Hub-Signature": "test-signature",
+			},
+			bknds:          []backend.Backend{},
+			getResp:        installConfig{},
+			getErr:         nil,
+			putErr:         nil,
+			validateErr:    nil,
+			clientErr:      errors.New("mock client error"),
+			getContentResp: "",
+			getContentErr:  nil,
+			err:            "error creating client: mock client error",
+			status:         500,
+			respBody:       "error creating client: mock client error",
+		},
+		{
+			desc: "error getting repo config content",
+			body: `{"repository": {"full_name": "test-owner/test-name"}}`,
+			headers: map[string]string{
+				"X-GitHub-Event":  "issues",
+				"X-Hub-Signature": "test-signature",
+			},
+			bknds:          []backend.Backend{},
+			getResp:        installConfig{},
+			getErr:         nil,
+			putErr:         nil,
+			validateErr:    nil,
+			clientErr:      nil,
+			getContentResp: "",
+			getContentErr:  errors.New("mock content error"),
+			err:            "error getting repo config file: mock content error",
+			status:         500,
+			respBody:       "error getting repo config file: mock content error",
+		},
+		{
+			desc: "error calling issue event backend act",
+			body: `{"repository": {"full_name": "test-owner/test-name"}}`,
+			headers: map[string]string{
+				"X-GitHub-Event":  "issues",
+				"X-Hub-Signature": "test-issues",
+			},
+			bknds: []backend.Backend{
+				&testBackend{
+					prepareErr: nil,
+					actErr:     errors.New("mock act error"),
+				},
+			},
+			getResp:        installConfig{},
+			getErr:         nil,
+			putErr:         nil,
+			validateErr:    nil,
+			clientErr:      nil,
+			getContentResp: "",
+			getContentErr:  nil,
+			err:            "error calling backend act: mock act error",
+			status:         500,
+			respBody:       "error calling backend act: mock act error",
+		},
+		{
+			desc: "successful issue event invocation",
+			body: `{"repository": {"full_name": "test-owner/test-name"}}`,
+			headers: map[string]string{
+				"X-GitHub-Event":  "issues",
+				"X-Hub-Signature": "test-signature",
+			},
+			bknds: []backend.Backend{
+				&testBackend{
+					prepareErr: nil,
+					actErr:     nil,
+				},
+			},
+			getResp:        installConfig{},
+			getErr:         nil,
+			putErr:         nil,
+			validateErr:    nil,
+			clientErr:      nil,
+			getContentResp: "",
+			getContentErr:  nil,
+			err:            "",
+			status:         200,
+			respBody:       "success",
 		},
 	}
 
 	for _, test := range tests {
+		validateEvent = func(secret, signature string, body []byte) error {
+			return test.validateErr
+		}
+
 		newClient = func(appID, installationID int64, file string) (*github.Client, error) {
 			return github.NewClient(nil), test.clientErr
 		}
@@ -485,7 +493,7 @@ func TestEvent(t *testing.T) {
 			putErr:  test.putErr,
 		}
 
-		resp, err := Event(req, db)
+		resp, err := Event(req, db, test.bknds)
 		if err != nil && err.Error() != test.err {
 			t.Errorf("description: %s, incorrect error message, received: %s, expected: %s", test.desc, err.Error(), test.err)
 		}

@@ -3,18 +3,25 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/google/go-github/v28/github"
 )
 
+func TestMain(m *testing.M) {
+	log.SetOutput(ioutil.Discard)
+	os.Exit(m.Run())
+}
+
 func Test_helpers(t *testing.T) {
 	mux := http.NewServeMux()
-
 	mux.HandleFunc("/repos/kamino/tipoca/pulls", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, `[{"number":1,"labels":[{"name":"est-1"}]}]`)
 	})
@@ -83,7 +90,7 @@ func Test_helpers(t *testing.T) {
 }
 
 func TestConfigure(t *testing.T) {
-	b := &Backend{}
+	b := Backend
 	c := github.NewClient(nil)
 	b.Configure(c)
 
@@ -121,15 +128,20 @@ func (mock *mockHelp) comment(c *github.Client, owner, repo string, pr *github.P
 }
 
 type mockPayload struct {
-	payload string
+	payload     string
+	payloadType string
 }
 
 func (mock *mockPayload) Type() string {
-	return ""
+	return mock.payloadType
 }
 
 func (mock *mockPayload) Bytes() []byte {
 	return []byte(mock.payload)
+}
+
+func (mock *mockPayload) Config() []byte {
+	return []byte("")
 }
 
 func boolPtr(input bool) *bool {
@@ -144,6 +156,7 @@ func TestPrepare(t *testing.T) {
 	tests := []struct {
 		desc               string
 		payload            string
+		payloadType        string
 		pullRequestsOutput []*github.PullRequest
 		pullRequestsErr    error
 		commentErr         error
@@ -152,6 +165,7 @@ func TestPrepare(t *testing.T) {
 		{
 			desc:               "error parsing payload bytes",
 			payload:            "incorrect-payload",
+			payloadType:        "",
 			pullRequestsOutput: nil,
 			pullRequestsErr:    nil,
 			commentErr:         nil,
@@ -159,17 +173,20 @@ func TestPrepare(t *testing.T) {
 		},
 		{
 			desc:               "error parsing payload bytes",
-			payload:            `{"repositories_added":[{"name":"test-name","owner":{"login":"test-login"}}]}`,
+			payload:            `{"repositories_added":[{"full_name": "test-name/test-login"}]}`,
+			payloadType:        "pull_request",
 			pullRequestsOutput: nil,
 			pullRequestsErr:    errors.New("mock get pull requests error"),
 			commentErr:         nil,
 			err:                "error getting pull requests: mock get pull requests error",
 		},
 		{
-			desc:    "error commenting on pull request",
-			payload: `{"repositories_added":[{"name":"test-name","owner":{"login":"test-login"}}]}`,
+			desc:        "error commenting on pull request",
+			payload:     `{"repositories_added":[{"full_name": "test-name/test-login"}]}`,
+			payloadType: "pull_request",
+
 			pullRequestsOutput: []*github.PullRequest{
-				&github.PullRequest{
+				{
 					ClosedAt: timePtr(time.Now()),
 					Merged:   boolPtr(true),
 				},
@@ -179,10 +196,12 @@ func TestPrepare(t *testing.T) {
 			err:             "error posting comment: mock comment error",
 		},
 		{
-			desc:    "successful invocation",
-			payload: `{"repositories_added":[{"name":"test-name","owner":{"login":"test-login"}}]}`,
+			desc:        "successful invocation",
+			payload:     `{"repositories_added":[{"full_name": "test-name/test-login"}]}`,
+			payloadType: "pull_request",
+
 			pullRequestsOutput: []*github.PullRequest{
-				&github.PullRequest{
+				{
 					ClosedAt: timePtr(time.Now()),
 					Merged:   boolPtr(true),
 				},
@@ -195,7 +214,8 @@ func TestPrepare(t *testing.T) {
 
 	for _, test := range tests {
 		p := &mockPayload{
-			payload: test.payload,
+			payload:     test.payload,
+			payloadType: test.payloadType,
 		}
 
 		h := &mockHelp{
@@ -204,9 +224,8 @@ func TestPrepare(t *testing.T) {
 			commentErr:         test.commentErr,
 		}
 
-		b := Backend{
-			help: h,
-		}
+		b := Backend
+		b.help = h
 
 		err := b.Prepare(p)
 		if err != nil && err.Error() != test.err {
@@ -230,13 +249,13 @@ func TestAct(t *testing.T) {
 		},
 		{
 			desc:       "error commenting on pull request",
-			payload:    `{"action":"closed","pull_request":{"merged":true},"repository":{"owner":{"login":"test-login"},"name":"test-repo"}}`,
+			payload:    `{"action":"closed","pull_request":{"merged":true},"repository":{"full_name": "test-owner/test-login"}}`,
 			commentErr: errors.New("mock comment error"),
 			err:        "error posting comment: mock comment error",
 		},
 		{
 			desc:       "successful invocation",
-			payload:    `{"action":"closed","pull_request":{"merged":true},"repository":{"owner":{"login":"test-login"},"name":"test-repo"}}`,
+			payload:    `{"action":"closed","pull_request":{"merged":true},"repository":{"full_name": "test-owner/test-login"}}`,
 			commentErr: nil,
 			err:        "",
 		},
@@ -251,9 +270,8 @@ func TestAct(t *testing.T) {
 			commentErr: test.commentErr,
 		}
 
-		b := Backend{
-			help: h,
-		}
+		b := Backend
+		b.help = h
 
 		err := b.Act(p)
 		if err != nil && err.Error() != test.err {

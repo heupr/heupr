@@ -6,6 +6,7 @@ import "github.com/google/go-github/v28/github"
 type Payload interface {
 	Type() string
 	Bytes() []byte
+	Config() []byte
 }
 
 // Backend defines the contract packages must follow for use with the application

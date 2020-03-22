@@ -3,6 +3,7 @@ package frontend
 import (
 	"context"
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/bradleyfalzon/ghinstallation"
@@ -24,8 +25,22 @@ var getContent = func(c *github.Client, owner, repo, path string) (string, error
 	opts := &github.RepositoryContentGetOptions{}
 	file, _, _, err := c.Repositories.GetContents(context.Background(), owner, repo, path, opts)
 	if err != nil {
-		return "", errors.New("error getting content: " + err.Error())
+		return "", errors.New("error getting content object: " + err.Error())
 	}
 
-	return *file.Content, nil
+	content, err := file.GetContent()
+	if err != nil {
+		return "", errors.New("error getting content string: " + err.Error())
+	}
+
+	return content, nil
+}
+
+var validateEvent = func(secret, signature string, body []byte) error {
+	log.Printf("validate event body: %s\n", body)
+	if err := github.ValidateSignature(signature, body, []byte(secret)); err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -6,4 +6,3 @@ backends:
     actions:
     - merged
   settings: {}
-  location: https://github.com/heupr/heupr/estimatepr.so

@@ -5,21 +5,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
-	"plugin"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/go-yaml/yaml"
-	"github.com/google/go-github/v28/github"
+	"github.com/tidwall/gjson"
 
 	"github.com/heupr/heupr/backend"
 )
 
-func createResponse(code int, msg string) (events.APIGatewayProxyResponse, error) {
+// APIResponse generates required output for proxy integrations
+func APIResponse(code int, msg string) (events.APIGatewayProxyResponse, error) {
 	log.Printf("response code: %d, message: %s\n", code, msg)
 	resp := events.APIGatewayProxyResponse{
 		StatusCode:      code,
@@ -36,46 +34,68 @@ func createResponse(code int, msg string) (events.APIGatewayProxyResponse, error
 
 type installConfig struct {
 	AppID          int64  `json:"id"`
+	FullName       string `json:"full_name"`
 	PEM            string `json:"pem"`
 	WebhookSecret  string `json:"webhook_secret"`
 	InstallationID int64  `json:"installation_id"`
-	RepoOwner      string `json:"repo_owner"`
-	RepoName       string `json:"repo_name"`
 }
 
-var post = http.Post // for test mocks
+var post = func(req *http.Request) (*http.Response, error) {
+	client := &http.Client{}
+	return client.Do(req)
+}
 
 // Install configures a new repo installation for the Heupr app
 func Install(request events.APIGatewayProxyRequest, db Database) (events.APIGatewayProxyResponse, error) {
-	log.Printf("install request: %+v", request)
+	log.Printf("install request: %+v\n", request)
 
-	code := request.Headers["code"]
+	code := request.QueryStringParameters["code"]
 	if code == "" {
-		return createResponse(http.StatusBadRequest, "no code received")
+		return APIResponse(http.StatusBadRequest, "no code received")
 	}
+	log.Printf("request code: %s\n", code)
 
 	b := new(bytes.Buffer)
-	resp, err := post("https://github.com/app-manifests/"+code+"/conversions", "application/json", b)
+	req, err := http.NewRequest("POST", "https://api.github.com/app-manifests/"+code+"/conversions", b)
 	if err != nil {
-		return createResponse(http.StatusInternalServerError, "error converting code: "+err.Error())
+		return APIResponse(http.StatusInternalServerError, "error creating response: "+err.Error())
+	}
+	req.Header.Set("Accept", "application/vnd.github.fury-preview+json")
+
+	resp, err := post(req)
+	if err != nil {
+		return APIResponse(http.StatusInternalServerError, "error converting code: "+err.Error())
 	}
 	defer resp.Body.Close()
 
+	log.Printf("manifest response: %+v\n", resp)
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return createResponse(http.StatusInternalServerError, "error reading conversion body")
+		return APIResponse(http.StatusInternalServerError, "error reading conversion body")
+	}
+	log.Printf("request body: %s\n", body)
+
+	config := installConfig{}
+	if err := json.Unmarshal(body, &config); err != nil {
+		return APIResponse(http.StatusInternalServerError, "error parsing conversion body")
+	}
+	log.Printf("installation config: %+v\n", config)
+
+	if err := db.Put(config); err != nil {
+		return APIResponse(http.StatusInternalServerError, "error putting app config: "+err.Error())
 	}
 
-	installConfig := installConfig{}
-	if err := json.Unmarshal(body, &installConfig); err != nil {
-		return createResponse(http.StatusInternalServerError, "error parsing conversion body")
-	}
+	log.Println("successful install handler invocation")
 
-	if err := db.Put(installConfig); err != nil {
-		return createResponse(http.StatusInternalServerError, "error putting app config: "+err.Error())
-	}
-
-	return createResponse(http.StatusOK, "success")
+	return events.APIGatewayProxyResponse{
+		StatusCode: 302,
+		Headers: map[string]string{
+			"Location": "https://heupr.github.io/success",
+		},
+		Body:            "success",
+		IsBase64Encoded: false,
+	}, nil
 }
 
 type webhookEvent struct {
@@ -96,6 +116,7 @@ type configObj struct {
 type payload struct {
 	B []byte
 	T string
+	C []byte
 }
 
 func (p *payload) Bytes() []byte {
@@ -106,152 +127,126 @@ func (p *payload) Type() string {
 	return p.T
 }
 
-func processBackends(client *github.Client, payloadInput backend.Payload, backends []backendObj, method string) error {
-	for _, b := range backends {
-		soFile := b.Name + ".so"
-
-		if _, err := os.Stat(soFile); err != nil {
-			resp, err := http.Get(b.Location)
-			if err != nil {
-				return fmt.Errorf("error fetching external %s file: %s", soFile, err.Error())
-			}
-			defer resp.Body.Close()
-
-			out, err := os.Create(soFile)
-			if err != nil {
-				return fmt.Errorf("error creating external %s file: %s", soFile, err.Error())
-			}
-			defer out.Close()
-
-			_, err = io.Copy(out, resp.Body)
-			if err != nil {
-				return fmt.Errorf("error copying %s file: %s", soFile, err.Error())
-			}
-			defer out.Close()
-		}
-
-		plug, err := plugin.Open(soFile)
-		if err != nil {
-			return fmt.Errorf("error opening %s file: %s", soFile, err.Error())
-		}
-
-		symBackend, err := plug.Lookup("Backend")
-		if err != nil {
-			return fmt.Errorf("error looking up backend plugin: %s", err.Error())
-		}
-
-		var bknd backend.Backend
-		bknd, ok := symBackend.(backend.Backend)
-		if !ok {
-			return errors.New("error type asserting backend plugin")
-		}
-
-		bknd.Configure(client)
-
-		if method == "prepare" {
-			if err := bknd.Prepare(payloadInput); err != nil {
-				return fmt.Errorf("error calling backend prepare method: %s", err.Error())
-			}
-		} else if method == "act" {
-			if err := bknd.Act(payloadInput); err != nil {
-				return fmt.Errorf("error calling backend prepare method: %s", err.Error())
-			}
-		}
-	}
-
-	return nil
+func (p *payload) Config() []byte {
+	return p.C
 }
 
 // Event processes webhook events received by Heupr app repo installations
-func Event(request events.APIGatewayProxyRequest, db Database) (events.APIGatewayProxyResponse, error) {
+func Event(request events.APIGatewayProxyRequest, db Database, bknds []backend.Backend) (events.APIGatewayProxyResponse, error) {
+	log.Printf("event request: %+v\n", request)
+
+	eventType := request.Headers["X-GitHub-Event"]
 	signature := request.Headers["X-Hub-Signature"]
-	installConfig, err := db.Get(signature)
-	if err != nil {
-		return createResponse(http.StatusInternalServerError, "error getting config: "+err.Error())
-	}
+	log.Printf("event type: %s, signature: %s\n", eventType, signature)
 
-	githubPayload := []byte(request.Body)
-	if err := github.ValidateSignature(signature, githubPayload, []byte(installConfig.WebhookSecret)); err != nil {
-		return createResponse(http.StatusInternalServerError, "error validating payload: "+err.Error())
-	}
+	body := []byte(request.Body)
 
-	eventType := request.Headers["X-Github-Event"]
-	event, err := github.ParseWebHook(eventType, githubPayload)
-	if err != nil {
-		return createResponse(http.StatusInternalServerError, "error parsing webhook event: "+err.Error())
-	}
+	switch eventType {
+	case "installation", "integration_installation", "installation_repositories", "integration_installation_repositories": // NOTE: Last two kept for GitHub inconsistency
+		appID := gjson.Get(request.Body, "installation.app_id").Int()
+		installationID := gjson.Get(request.Body, "installation.id").Int()
 
-	eventBytes, err := json.Marshal(event)
-	if err != nil {
-		return createResponse(http.StatusInternalServerError, "error marshalling event: "+err.Error())
-	}
+		log.Printf("app id: %d, installation id: %d\n", appID, installationID)
 
-	payloadInput := &payload{
-		B: eventBytes,
-		T: eventType,
-	}
-
-	switch v := event.(type) {
-	case *github.InstallationRepositoriesEvent:
-		if *v.Action != "added" {
-			return createResponse(http.StatusInternalServerError, fmt.Sprintf("repo event not \"added\", received event: \"%s\"", *v.Action))
-		}
-
-		client, err := newClient(*v.Installation.ID, *v.Installation.AppID, installConfig.PEM)
+		installConfig, err := db.Get(appID)
 		if err != nil {
-			return createResponse(http.StatusInternalServerError, "error creating client: "+err.Error())
+			return APIResponse(http.StatusInternalServerError, "error getting config: "+err.Error())
 		}
 
-		for _, repo := range v.RepositoriesAdded { // NOTE: Refactor into helper function
-			owner := *repo.Owner.Login
-			repo := *repo.Name
+		if err := validateEvent(installConfig.WebhookSecret, signature, body); err != nil {
+			return APIResponse(http.StatusInternalServerError, "error validating event: "+err.Error())
+		}
 
-			installConfig.InstallationID = *v.Installation.ID
-			installConfig.RepoOwner = owner
-			installConfig.RepoName = repo
+		repos := gjson.Result{}
+		if !strings.Contains(eventType, "repositories") {
+			repos = gjson.Get(request.Body, "repositories.#.full_name")
+		} else {
+			repos = gjson.Get(request.Body, "repositories_added.#.full_name")
+		}
+
+		log.Printf("repositories: %v\n", repos)
+
+		for _, repo := range repos.Array() {
+			fullName := repo.String()
+			log.Printf("repository: %s\n", fullName)
+
+			installConfig.FullName = fullName
+			installConfig.InstallationID = installationID
+
+			client, err := newClient(installConfig.AppID, installConfig.InstallationID, installConfig.PEM)
+			if err != nil {
+				return APIResponse(http.StatusInternalServerError, "error creating client: "+err.Error())
+			}
 
 			if err := db.Put(installConfig); err != nil {
-				return createResponse(http.StatusInternalServerError, "error putting app config: "+err.Error())
+				return APIResponse(http.StatusInternalServerError, "error putting app config: "+err.Error())
 			}
 
-			file, err := getContent(client, owner, repo, ".heupr.yml")
+			fullNameSplit := strings.Split(fullName, "/")
+			file, err := getContent(client, fullNameSplit[0], fullNameSplit[1], ".heupr.yml")
 			if err != nil {
-				return createResponse(http.StatusInternalServerError, "error getting repo config file: "+err.Error())
+				return APIResponse(http.StatusInternalServerError, "error getting repo config file: "+err.Error())
+			}
+			log.Printf("file content: %s\n", file)
+
+			backendPayload := &payload{
+				T: eventType,
+				B: body,
+				C: []byte(file),
 			}
 
-			repoConfig := configObj{}
-			if err := yaml.Unmarshal([]byte(file), &repoConfig); err != nil {
-				return createResponse(http.StatusInternalServerError, "error parsing repo config file: "+err.Error())
-			}
-
-			if err := processBackends(client, payloadInput, repoConfig.Backends, "prepare"); err != nil {
-				return createResponse(http.StatusInternalServerError, "error processing event: "+err.Error())
+			for _, bknd := range bknds {
+				bknd.Configure(client)
+				if err := bknd.Prepare(backendPayload); err != nil {
+					return APIResponse(http.StatusInternalServerError, "error calling backend prepare: "+err.Error())
+				}
 			}
 		}
 
-	case *github.IssuesEvent, *github.PullRequestEvent:
-		client, err := newClient(installConfig.InstallationID, installConfig.AppID, installConfig.PEM)
+	case "issues", "pull_request", "project", "project_card", "project_column":
+		fullName := gjson.Get(request.Body, "repository.full_name").String()
+
+		installConfig, err := db.Get(fullName)
 		if err != nil {
-			return createResponse(http.StatusInternalServerError, "error creating client: "+err.Error())
+			return APIResponse(http.StatusInternalServerError, "error getting config: "+err.Error())
+		}
+		log.Printf("installation config: %+v\n", installConfig)
+
+		if err := validateEvent(installConfig.WebhookSecret, signature, body); err != nil {
+			return APIResponse(http.StatusInternalServerError, "error validating event: "+err.Error())
 		}
 
-		file, err := getContent(client, installConfig.RepoOwner, installConfig.RepoName, ".heupr.yml")
+		client, err := newClient(installConfig.AppID, installConfig.InstallationID, installConfig.PEM)
 		if err != nil {
-			return createResponse(http.StatusInternalServerError, "error getting repo config file: "+err.Error())
+			return APIResponse(http.StatusInternalServerError, "error creating client: "+err.Error())
 		}
 
-		repoConfig := configObj{}
-		if err := yaml.Unmarshal([]byte(file), &repoConfig); err != nil {
-			return createResponse(http.StatusInternalServerError, "error parsing repo config file: "+err.Error())
+		fullNameSplit := strings.Split(fullName, "/")
+		file, err := getContent(client, fullNameSplit[0], fullNameSplit[1], ".heupr.yml")
+		if err != nil {
+			return APIResponse(http.StatusInternalServerError, "error getting repo config file: "+err.Error())
+		}
+		log.Printf("file content: %s\n", file)
+
+		backendPayload := &payload{
+			T: eventType,
+			B: body,
+			C: []byte(file),
 		}
 
-		if err := processBackends(client, payloadInput, repoConfig.Backends, "act"); err != nil {
-			return createResponse(http.StatusInternalServerError, "error processing event: "+err.Error())
+		for _, bknd := range bknds {
+			bknd.Configure(client)
+			if err := bknd.Act(backendPayload); err != nil {
+				return APIResponse(http.StatusInternalServerError, "error calling backend act: "+err.Error())
+			}
 		}
 
 	default:
-		return createResponse(http.StatusInternalServerError, "event type "+eventType+" not supported")
+		message := fmt.Sprintf("event type %s not supported", eventType)
+		log.Println(message)
+		return APIResponse(http.StatusInternalServerError, message)
 	}
 
-	return createResponse(http.StatusOK, "success")
+	log.Println("successful event handler invocation")
+	return APIResponse(http.StatusOK, "success")
 }

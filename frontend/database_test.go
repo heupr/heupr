@@ -2,21 +2,33 @@ package frontend
 
 import (
 	"errors"
+	"os"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 )
 
+func TestNewDatabase(t *testing.T) {
+	os.Setenv("AWS_REGION", "us-east-1")
+
+	db := NewDatabase()
+	if db == nil {
+		t.Errorf("description: create database error, received: %+v", db)
+	}
+
+	os.Unsetenv("AWS_REGION")
+}
+
 type mockDBClient struct {
-	getItemOutput    *dynamodb.GetItemOutput
-	getItemErr       error
+	queryItemOutput  *dynamodb.QueryOutput
+	queryErr         error
 	updateItemOutput *dynamodb.UpdateItemOutput
 	updateItemErr    error
 }
 
-func (m *mockDBClient) GetItem(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
-	return m.getItemOutput, m.getItemErr
+func (m *mockDBClient) Query(input *dynamodb.QueryInput) (*dynamodb.QueryOutput, error) {
+	return m.queryItemOutput, m.queryErr
 }
 
 func (m *mockDBClient) UpdateItem(input *dynamodb.UpdateItemInput) (*dynamodb.UpdateItemOutput, error) {
@@ -43,23 +55,22 @@ func TestPut(t *testing.T) {
 			err:              "put item error: mock update error",
 		},
 		{
-			desc: "successful invocation repo installation info",
+			desc: "successful invocation app installation info",
 			config: installConfig{
-				WebhookSecret:  "secret",
-				InstallationID: 4,
-				RepoOwner:      "gar",
-				RepoName:       "orders",
+				WebhookSecret: "secret",
+				AppID:         4,
+				PEM:           "gar-contingency-command",
 			},
 			updateItemOutput: nil,
 			updateItemErr:    nil,
 			err:              "",
 		},
 		{
-			desc: "successful invocation app installation info",
+			desc: "successful invocation repo installation info",
 			config: installConfig{
-				WebhookSecret: "secret",
-				AppID:         4,
-				PEM:           "gar contingency command",
+				WebhookSecret:  "secret",
+				InstallationID: 4,
+				FullName:       "Contingency Orders for the Grand Army of the Republic: Order Initiation, Orders 1 Through 150",
 			},
 			updateItemOutput: nil,
 			updateItemErr:    nil,
@@ -85,54 +96,100 @@ func TestPut(t *testing.T) {
 
 func TestGet(t *testing.T) {
 	tests := []struct {
-		desc          string
-		key           string
-		getItemOutput *dynamodb.GetItemOutput
-		getItemErr    error
-		output        installConfig
-		err           string
+		desc            string
+		key             interface{}
+		queryItemOutput *dynamodb.QueryOutput
+		queryErr        error
+		output          installConfig
+		err             string
 	}{
 		{
-			desc:          "error getting item",
-			key:           "key",
-			getItemOutput: nil,
-			getItemErr:    errors.New("get mock error"),
-			output:        installConfig{},
-			err:           "get item error: get mock error",
+			desc:            "error getting item",
+			key:             "watto",
+			queryItemOutput: nil,
+			queryErr:        errors.New("query mock error"),
+			output:          installConfig{},
+			err:             "get item error: query mock error",
 		},
 		{
-			desc: "successful invocation",
-			key:  "test-key",
-			getItemOutput: &dynamodb.GetItemOutput{
-				Item: map[string]*dynamodb.AttributeValue{
-					"app_id": {
-						N: aws.String("1"),
-					},
-					"pem": {
-						S: aws.String("tatoo-i-tatoo-ii-ghomrassen-guermessa-chenini"),
-					},
-					"webhook_secret": {
-						S: aws.String("skywalker"),
-					},
-					"installation_id": {
-						N: aws.String("2"),
-					},
-					"repo_owner": {
-						S: aws.String("outer-rim"),
-					},
-					"repo_name": {
-						S: aws.String("tatooine"),
+			desc: "invalid key",
+			key:  "shmi",
+			queryItemOutput: &dynamodb.QueryOutput{
+				Items: []map[string]*dynamodb.AttributeValue{
+					map[string]*dynamodb.AttributeValue{
+						"mother": {
+							S: aws.String("skywalker"),
+						},
 					},
 				},
 			},
-			getItemErr: nil,
+			queryErr: nil,
+			output:   installConfig{},
+			err:      "key not provided: mother",
+		},
+		{
+			desc: "successful string invocation",
+			key:  "anakin",
+			queryItemOutput: &dynamodb.QueryOutput{
+				Items: []map[string]*dynamodb.AttributeValue{
+					map[string]*dynamodb.AttributeValue{
+						"app_id": {
+							N: aws.String("1"),
+						},
+						"pem": {
+							S: aws.String("tatoo-i-tatoo-ii-ghomrassen-guermessa-chenini"),
+						},
+						"webhook_secret": {
+							S: aws.String("skywalker"),
+						},
+						"installation_id": {
+							N: aws.String("2"),
+						},
+						"full_name": {
+							S: aws.String("tatooine"),
+						},
+					},
+				},
+			},
+			queryErr: nil,
 			output: installConfig{
 				AppID:          1,
 				PEM:            "tatoo-i-tatoo-ii-ghomrassen-guermessa-chenini",
 				WebhookSecret:  "skywalker",
 				InstallationID: 2,
-				RepoOwner:      "outer-rim",
-				RepoName:       "tatooine",
+			},
+			err: "",
+		},
+		{
+			desc: "successful int64 invocation",
+			key:  int64(1038),
+			queryItemOutput: &dynamodb.QueryOutput{
+				Items: []map[string]*dynamodb.AttributeValue{
+					map[string]*dynamodb.AttributeValue{
+						"app_id": {
+							N: aws.String("1"),
+						},
+						"pem": {
+							S: aws.String("tatoo-i-tatoo-ii-ghomrassen-guermessa-chenini"),
+						},
+						"webhook_secret": {
+							S: aws.String("skywalker"),
+						},
+						"installation_id": {
+							N: aws.String("2"),
+						},
+						"full_name": {
+							S: aws.String("tatooine"),
+						},
+					},
+				},
+			},
+			queryErr: nil,
+			output: installConfig{
+				AppID:          1,
+				PEM:            "tatoo-i-tatoo-ii-ghomrassen-guermessa-chenini",
+				WebhookSecret:  "skywalker",
+				InstallationID: 2,
 			},
 			err: "",
 		},
@@ -141,8 +198,8 @@ func TestGet(t *testing.T) {
 	for _, test := range tests {
 		db := db{
 			dynamodb: &mockDBClient{
-				getItemOutput: test.getItemOutput,
-				getItemErr:    test.getItemErr,
+				queryItemOutput: test.queryItemOutput,
+				queryErr:        test.queryErr,
 			},
 		}
 
