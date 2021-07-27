@@ -27,6 +27,6 @@ require (
 	github.com/steveyen/gtreap v0.0.0-20150807155958-0abe01ef9be2 // indirect
 	github.com/syndtr/goleveldb v1.0.0 // indirect
 	github.com/tecbot/gorocksdb v0.0.0-20191217155057-f0fad39f321c // indirect
-	github.com/tidwall/gjson v1.3.5
+	github.com/tidwall/gjson v1.6.5
 	go.etcd.io/bbolt v1.3.3 // indirect
 )
