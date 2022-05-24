@@ -29,4 +29,5 @@ require (
 	github.com/tecbot/gorocksdb v0.0.0-20191217155057-f0fad39f321c // indirect
 	github.com/tidwall/gjson v1.9.3
 	go.etcd.io/bbolt v1.3.3 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
