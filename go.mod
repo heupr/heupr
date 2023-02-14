@@ -5,7 +5,7 @@ go 1.12
 require (
 	github.com/RoaringBitmap/roaring v0.4.21 // indirect
 	github.com/aws/aws-lambda-go v1.13.3
-	github.com/aws/aws-sdk-go v1.25.37
+	github.com/aws/aws-sdk-go v1.34.0
 	github.com/bbalet/stopwords v1.0.0
 	github.com/blevesearch/bleve v0.8.1
 	github.com/blevesearch/blevex v0.0.0-20190916190636-152f0fe5c040 // indirect
